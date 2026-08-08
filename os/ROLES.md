@@ -64,12 +64,18 @@ Desarrollo de producto.
 - Documentar las decisiones técnicas.
 **role_doc:** `roles/dev/ROLE.md`
 
-### Design (especialista, planificado)
-Diseño de producto y de experiencia.
-- Diseñar interfaces.
-- Definir sistemas visuales.
-- Prototipar interacciones.
-- Validar usabilidad.
+### Design (especialista, activo)
+Diseño de producto y de experiencia. Dueño del sistema visual y la experiencia de usuario.
+- Diseñar interfaces web, móvil y conversacionales.
+- Definir y mantener sistemas de diseño visual (colores, tipografía, espaciado, componentes).
+- Prototipar interacciones y flujos de usuario completos.
+- Validar usabilidad mediante heurísticas y pruebas.
+- Generar assets visuales (íconos, ilustraciones, imágenes).
+- Documentar decisiones de diseño como DEC-XXX cuando sean importantes.
+- Colaborar con Dev en handoff de diseño a código.
+- Colaborar con Marketing en coherencia visual entre producto y campañas.
+- Cada entregable incluye hipótesis de diseño verificable (DEC-LOGAN-004).
+**Never:** decide la visión del producto, se dirige al usuario, escribe código backend, modifica la arquitectura de LOGAN OS, opera sin mandato de Core.
 **role_doc:** `roles/design/ROLE.md`
 
 ### Analytics (especialista, planificado) — verifica las hipótesis de los demás roles
