@@ -19,7 +19,7 @@ leyendo un solo documento.
 | LOGAN Memory | sistema | activo (en app) | 2026-07-29 |
 | LOGAN Marketing | especialista | activo | 2026-07-29 |
 | Dev | especialista | planificado | — |
-| Design | especialista | planificado | — |
+| Design | especialista | activo (definición) | 2026-08-08 |
 | Analytics | especialista | planificado | — |
 | Finance | especialista | planificado | — |
 | Legal | especialista | planificado | — |
@@ -70,6 +70,11 @@ leyendo un solo documento.
 - Project "Mr. Trámite" creado con datos reales de la Biblia_MrTramite.md.
 - Memory Entry apuntando a github.com/appsmx/mrtramite + mrtramite.vercel.app.
 - DEC-001 y DEC-002 de Mr. Trámite importadas a LOGAN.
+
+### 2026-08-08 — Rol Design activado (definición)
+- `roles/design/ROLE.md` definido con responsabilidades, límites, mandato típico, entregable típico e hipótesis típica.
+- Design pasa de "planificado" a "activo (definición)" en ROLES.md y ECOSYSTEM.md.
+- Primer especialista de diseño operativo en el ecosistema LOGAN.
 
 ### Pendiente
 - Etapa 4: cerrada — Mr. Trámite YA está construido (mrtramite.vercel.app)
