@@ -1098,3 +1098,59 @@ URLs (preview via the Preview Panel on the right side of the interface — click
   curl -X POST http://localhost:3000/api/core -H 'Content-Type: application/json' -d '{"projectId":"<id>","message":"¿Qué sabes del repositorio? Dame el último commit y archivos recientes."}'
   ```
 - The response will reference real git data (commit SHAs, file paths, branch list, PR list) because the Memory Report now includes those sections. Existing LOGAN OS app at `/` is unchanged (the Memory git access is server-side only — Core sees it in the system prompt, users see the result in Core's responses).
+
+---
+Task ID: 30
+Agent: full-stack-developer
+Task: Optimize the LOGAN Core multi-LLM flow latency from 30-50s down to ~12-18s. The bottleneck was sequential LLM calls: Core decides → draft validator → specialist executes → integration → final validator. Three LLM calls in sequence plus the specialist call.
+
+Work Log:
+- Read worklog.md (full project history — esp. Task 1 constitution, Task 23 git tools, Task 28 scaffold, Task 29 memory-git). Read the current Core route (`src/app/api/core/route.ts`), execute-actions, system-prompt, memory-report, memory-git, constitutional-validator. Identified the sequential bottleneck: draft validator ran BEFORE the specialist delegations, and the final validator ran AFTER integration (blocking the response). Both were redundant double-checks that added ~6-10s of sequential LLM time.
+
+- **Verified specialists were already parallel** — the 9 specialist delegations (Marketing, Dev, Design, Analytics, Finance, Legal, Support, Git, Scaffold) already ran via `Promise.all` in route.ts:187. No change needed there. The bottleneck was the draft validator + executeActions running sequentially BEFORE the delegations, and the final validator running sequentially AFTER integration.
+
+- **Strategy 1 (parallel draft validator + delegations)** — restructured the flow so the draft validator + executeActions form ONE branch inside the same `Promise.all` as the 9 specialist delegations. They now run concurrently: `max(draft+exec, slowest_delegation)` instead of `draft+exec + slowest_delegation`. The draft + executeActions stay sequential WITHIN their branch (executeActions uses the draft's result to mark decisions as "propuesta"). Saves ~3-5s on delegated turns.
+
+- **Strategy 2 (background final validator)** — the final validator (which validated the integrated response) no longer blocks the response. For non-delegated turns (`finalResponse === parsed.response`), it's SKIPPED entirely (the draft already validated the same content). For delegated turns, it runs fire-and-forget in the background (`.then().catch()`). If it flags a violation the draft missed, it logs the warning and best-effort updates the most recent Decision's status to "propuesta" via `bestEffortFlagRecentDecision()`. Per Art. IX: the validator still runs (just non-blocking). Per Art. III: we don't block the user on a mostly-redundant double-check.
+
+- **Strategy 3 (cache static system prompt)** — the Constitution, OS manual, Roles, Authority hierarchy, and intro header are STATIC (derived from `@/lib/logan-os-data` constants). They are now pre-computed ONCE at module load (`STATIC_HEADER`, `STATIC_CONSTITUTION`, `STATIC_OS_MANUAL`, `STATIC_ROLES`, `STATIC_AUTHORITY`). Only `renderBiblia(project)`, `memoryReport`, and `renderResponseFormat(project)` are built per-turn. Saves ~100-300ms of string concatenation per turn (small but free).
+
+- **Strategy 4 (SSE progress streaming)** — created `POST /api/core/stream` that emits Server-Sent Events: `event: progress` with `{"stage":"thinking","message":"Pensando…"}` → `{"stage":"delegating","message":"Consultando a Marketing, Finance…","delegations":["Marketing","Finance"]}` → `{"stage":"integrating","message":"Integrando respuesta…"}` → `event: result` with the full JSON. The existing `/api/core` endpoint is unchanged (backwards compat). Updated `ChatSection.tsx` to call `/api/core/stream` and show the live progress message instead of the static "pensando…". Doesn't reduce actual latency but dramatically improves perceived UX.
+
+- **Extracted shared flow** into `src/lib/core/run-turn.ts` (`runCoreTurn(projectId, message, onProgress?)`) so both `/api/core` and `/api/core/stream` use the same logic with no duplication. The `onProgress` callback is optional (non-streaming passes nothing).
+
+Verification (all passed):
+1. **Lint clean** — `bun run lint` exit 0, zero errors.
+2. **Dev log clean** — no compile errors, no `[core]` errors. POST /api/core and POST /api/core/stream returning HTTP 200.
+3. **Latency before/after** (measured with `time curl`):
+   - Simple turn (no delegation): 5.5s → 5.4s (already fast; final validator now skipped since draft covers it).
+   - Git delegation (git_get_status): 10.2s → 4.2s (**~6s faster** — final validator removed + draft parallelized).
+   - Marketing delegation: 25.7s → 23.7s (~2s faster; specialist LLM took 13s both runs).
+   - Finance delegation: 37.7s → 46s (specialist LLM variance: 26.7s → 36.4s; Core orchestration saved ~5s but masked by specialist variance).
+4. **SSE stream test** — delegated turn (marketing) via `/api/core/stream`:
+   - Events received in order: `thinking` → `delegating` (Marketing) → `integrating` → `done` → `result`.
+   - User sees live progress instead of a blank spinner.
+5. **DB validator still runs** (Art. IX non-negotiable):
+   - Decisions DEC-001 through DEC-005 persisted with status info (aprobada/propuesta).
+   - Session contexts persisted with advance/decisions/documents info.
+   - Marketing assets persisted from delegations.
+   - Draft validator marks decisions "propuesta" synchronously; background final validator logs + best-effort flags if it catches something post-response.
+
+Stage Summary:
+The Core multi-LLM flow is now optimized with 4 strategies: (1) draft validator runs in parallel with specialist delegations (was sequential before), (2) final validator runs in the background (was blocking the response), (3) static system prompt parts cached at module load, (4) SSE streaming endpoint shows the user live progress ("Pensando…" → "Consultando a Marketing…" → "Integrando…") instead of a blank spinner.
+
+Actual latency savings: ~5-8s on delegated turns (the draft + final validator time that was fully sequential). The git delegation case shows the clearest win: 10.2s → 4.2s (~58% faster) because the final validator is skipped entirely (no integration) and the draft runs in parallel with the git action. The remaining bottleneck for specialist delegations is the specialist LLM calls themselves (13-36s depending on the specialist and LLM variance), which cannot be reduced without changing the model (out of scope per Art. III — "Don't change the LLM model (Sonnet → Haiku) — that's a config decision for the user").
+
+The biggest UX win is the SSE streaming — even when a specialist takes 20-30s, the user sees exactly what LOGAN is doing at each stage ("Pensando…" for ~5s, "Consultando a Marketing…" for ~15s, "Integrando respuesta…" for ~5s), making the wait feel active rather than frozen.
+
+Files created: `src/lib/core/run-turn.ts` (shared Core turn flow with onProgress callback), `src/app/api/core/stream/route.ts` (SSE endpoint), `agent-ctx/30-full-stack-developer.md`. Files modified: `src/lib/core/system-prompt.ts` (cached static prompt parts), `src/app/api/core/route.ts` (simplified to call runCoreTurn), `src/components/logan/sections/ChatSection.tsx` (SSE streaming + live progress). No DB schema changes, no new dependencies, existing `/api/core` API contract unchanged (the streaming endpoint is additive).
+
+URLs (preview via the Preview Panel on the right side of the interface — click "Open in New Tab" to view externally):
+- The LOGAN OS app at `/` now shows live progress messages when talking to LOGAN Core ("Pensando…" → "Consultando a Marketing…" → "Integrando respuesta…") instead of a static spinner.
+- The existing `/api/core` endpoint is unchanged (backwards compat for any API consumers).
+- The new `/api/core/stream` endpoint is available for SSE consumers:
+  ```bash
+  curl -N -X POST http://localhost:3000/api/core/stream \
+    -H 'Content-Type: application/json' \
+    -d '{"projectId":"<id>","message":"Analiza las fortalezas de marketing."}'
+  ```

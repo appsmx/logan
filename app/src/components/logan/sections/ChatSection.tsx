@@ -75,7 +75,12 @@ type ChatMessage = {
   actions?: ActionTaken[];
   constitutional?: CoreResponse["constitutionalCheck"];
   pending?: boolean;
+  /** Progress message from SSE streaming (e.g. "Consultando a Marketing…"). */
+  progress?: string;
 };
+
+/** Default progress text shown before the first SSE event arrives. */
+const DEFAULT_PROGRESS = "Pensando…";
 
 export function ChatSection() {
   const activeProjectId = useLoganStore((s) => s.activeProjectId);
@@ -122,37 +127,93 @@ export function ChatSection() {
       role: "logan",
       text: "",
       pending: true,
+      progress: DEFAULT_PROGRESS,
     };
     setMessages((m) => [...m, userMsg, pendingMsg]);
     setInput("");
     setSending(true);
 
     try {
-      const res = await fetch("/api/core", {
+      // Task 30: use the SSE streaming endpoint so the user sees progress
+      // ("Pensando…" → "Consultando a Marketing…" → "Integrando…") instead of a
+      // blank spinner. Falls back to /api/core if streaming fails.
+      const res = await fetch("/api/core/stream", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
         body: JSON.stringify({
           projectId: activeProjectId,
           message: trimmed,
         }),
       });
 
-      if (!res.ok) {
+      if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `Error ${res.status}`);
+        throw new Error((err as {error?:string}).error || `Error ${res.status}`);
       }
 
-      const data: CoreResponse = await res.json();
+      // Read the SSE stream: parse `event: X\ndata: {...}\n\n` blocks.
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let data: CoreResponse | null = null;
+      let streamError: string | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Split on double newline (SSE event boundary). Keep the trailing
+        // partial chunk in the buffer for the next iteration.
+        const events = buffer.split("\n\n");
+        buffer = events.pop() || "";
+
+        for (const block of events) {
+          if (!block.trim()) continue;
+          let eventType = "message";
+          let eventData = "";
+          for (const line of block.split("\n")) {
+            if (line.startsWith("event:")) eventType = line.slice(6).trim();
+            else if (line.startsWith("data:")) eventData += line.slice(5).trim();
+          }
+          if (!eventData) continue;
+
+          if (eventType === "progress") {
+            try {
+              const p = JSON.parse(eventData) as { stage: string; message: string };
+              const progressText = p.message || DEFAULT_PROGRESS;
+              setMessages((m) =>
+                m.map((msg) =>
+                  msg.id === pendingMsg.id ? { ...msg, progress: progressText } : msg
+                )
+              );
+            } catch { /* ignore malformed progress */ }
+          } else if (eventType === "result") {
+            try {
+              data = JSON.parse(eventData) as CoreResponse;
+            } catch { /* ignore malformed result */ }
+          } else if (eventType === "error") {
+            try {
+              const e = JSON.parse(eventData) as { error?: string; hint?: string };
+              streamError = e.error || "Error desconocido";
+            } catch { streamError = "Error desconocido"; }
+          }
+        }
+      }
+
+      if (streamError) throw new Error(streamError);
+      if (!data) throw new Error("No se recibió respuesta de LOGAN");
 
       setMessages((m) =>
         m.map((msg) =>
           msg.id === pendingMsg.id
             ? {
                 ...msg,
-                text: data.response || "(LOGAN no devolvió respuesta)",
-                actions: data.actionsTaken,
-                constitutional: data.constitutionalCheck,
+                text: data!.response || "(LOGAN no devolvió respuesta)",
+                actions: data!.actionsTaken,
+                constitutional: data!.constitutionalCheck,
                 pending: false,
+                progress: undefined,
               }
             : msg
         )
@@ -265,7 +326,7 @@ export function ChatSection() {
                   {m.pending ? (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                      <span className="text-sm italic">pensando…</span>
+                      <span className="text-sm italic">{m.progress || "pensando…"}</span>
                     </div>
                   ) : (
                     <div className="whitespace-pre-wrap text-sm leading-relaxed">

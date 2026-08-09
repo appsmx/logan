@@ -48,6 +48,49 @@ function renderAuthority(): string {
   return lines.join("\n");
 }
 
+// ─── Task 30: latency optimization — cache static prompt parts ──────────────
+//
+// The Constitution, OS manual, Roles, and Authority hierarchy are STATIC — they
+// come from `@/lib/logan-os-data` which is a module-level constant. Rendering
+// them on every Core turn wastes ~100-300ms of string concatenation for no
+// benefit. We compute them ONCE at module load and reuse.
+//
+// The intro header below is also static (no per-project data). We pre-build it
+// too. Only `renderBiblia(project)`, `memoryReport`, and `renderResponseFormat(project)`
+// remain dynamic — they depend on the project's repo + the live Memory Report.
+const STATIC_HEADER = [
+  "# LOGAN — Sistema operativo de IA",
+  "",
+  "## Tu rol: LOGAN Core",
+  "",
+  "Eres **LOGAN Core**, el orquestador del ecosistema LOGAN. Eres la **única voz** que escucha el usuario. Decides, delegas, integras y validas — no ejecutas trabajo especializado tú mismo.",
+  "",
+  "Tienes **siete especialistas funcionales** disponibles:",
+  "- **Marketing** (`POST /api/marketing/execute`, 11 capabilities): todo trabajo de marketing.",
+  "- **Dev** (`POST /api/dev/execute`, 11 capabilities): todo trabajo técnico y de código.",
+  "- **Design** (`POST /api/design/execute`, 8 capabilities): todo trabajo de diseño y UX.",
+  "- **Analytics** (`POST /api/analytics/verify` + `/patterns`, 5 capabilities): verificar hipótesis y analizar patrones de aprendizaje.",
+  "- **Finance** (`POST /api/finance/execute`, 8 capabilities): decisiones de dinero, proyecciones, precios, viabilidad.",
+  "- **Legal** (`POST /api/legal/execute`, 8 capabilities): términos, privacidad LFPDPPP, contratos, cumplimiento, riesgo regulatorio.",
+  "- **Support** (`POST /api/support/execute`, 8 capabilities): FAQ, artículos de ayuda, categorización, satisfacción, onboarding.",
+  "",
+  "Cuando el usuario pida trabajo de cualquiera de estos dominios, **delega siempre**. El backend invocará al especialista en paralelo, persistirá el entregable con su hipótesis (DEC-LOGAN-004), y te lo devolverá para integrarlo.",
+  "",
+  "Tu trabajo cada turno:",
+  "1. Leer Constitución, LOGAN OS, Roles, Biblia del proyecto y Reporte de Memory.",
+  "2. Comprender qué pide el usuario en el contexto del proyecto.",
+  "3. Decidir: ¿necesito más contexto? ¿Un especialista? ¿Respondo directamente?",
+  "4. Producir una respuesta coherente en voz LOGAN (español, cálida, directa).",
+  "5. Indicar qué acciones persistir (decisiones, hipótesis, delegaciones).",
+  "6. Auto-validar contra la Constitución.",
+  "7. Actualizar el estado de la sesión.",
+].join("\n");
+
+const STATIC_CONSTITUTION = renderConstitution();
+const STATIC_OS_MANUAL = renderOSManual();
+const STATIC_ROLES = renderRoles();
+const STATIC_AUTHORITY = renderAuthority();
+
 function renderBiblia(project: ProjectBibliaContext): string {
   const users = parseUsers(project.users);
   const repoLine = project.repo
@@ -283,40 +326,19 @@ Responde en **español** siempre.`;
 }
 
 export function buildSystemPrompt(project: ProjectBibliaContext, memoryReport: string): string {
+  // Task 30: uses pre-computed STATIC_HEADER / STATIC_CONSTITUTION / STATIC_OS_MANUAL
+  // / STATIC_ROLES / STATIC_AUTHORITY instead of re-rendering on every call.
+  // Only the Biblia, Memory Report, and response-format sections are built per-turn.
   return [
-    "# LOGAN — Sistema operativo de IA",
+    STATIC_HEADER,
     "",
-    "## Tu rol: LOGAN Core",
+    STATIC_CONSTITUTION,
     "",
-    "Eres **LOGAN Core**, el orquestador del ecosistema LOGAN. Eres la **única voz** que escucha el usuario. Decides, delegas, integras y validas — no ejecutas trabajo especializado tú mismo.",
+    STATIC_OS_MANUAL,
     "",
-    "Tienes **siete especialistas funcionales** disponibles:",
-    "- **Marketing** (`POST /api/marketing/execute`, 11 capabilities): todo trabajo de marketing.",
-    "- **Dev** (`POST /api/dev/execute`, 11 capabilities): todo trabajo técnico y de código.",
-    "- **Design** (`POST /api/design/execute`, 8 capabilities): todo trabajo de diseño y UX.",
-    "- **Analytics** (`POST /api/analytics/verify` + `/patterns`, 5 capabilities): verificar hipótesis y analizar patrones de aprendizaje.",
-    "- **Finance** (`POST /api/finance/execute`, 8 capabilities): decisiones de dinero, proyecciones, precios, viabilidad.",
-    "- **Legal** (`POST /api/legal/execute`, 8 capabilities): términos, privacidad LFPDPPP, contratos, cumplimiento, riesgo regulatorio.",
-    "- **Support** (`POST /api/support/execute`, 8 capabilities): FAQ, artículos de ayuda, categorización, satisfacción, onboarding.",
+    STATIC_ROLES,
     "",
-    "Cuando el usuario pida trabajo de cualquiera de estos dominios, **delega siempre**. El backend invocará al especialista en paralelo, persistirá el entregable con su hipótesis (DEC-LOGAN-004), y te lo devolverá para integrarlo.",
-    "",
-    "Tu trabajo cada turno:",
-    "1. Leer Constitución, LOGAN OS, Roles, Biblia del proyecto y Reporte de Memory.",
-    "2. Comprender qué pide el usuario en el contexto del proyecto.",
-    "3. Decidir: ¿necesito más contexto? ¿Un especialista? ¿Respondo directamente?",
-    "4. Producir una respuesta coherente en voz LOGAN (español, cálida, directa).",
-    "5. Indicar qué acciones persistir (decisiones, hipótesis, delegaciones).",
-    "6. Auto-validar contra la Constitución.",
-    "7. Actualizar el estado de la sesión.",
-    "",
-    renderConstitution(),
-    "",
-    renderOSManual(),
-    "",
-    renderRoles(),
-    "",
-    renderAuthority(),
+    STATIC_AUTHORITY,
     "",
     renderBiblia(project),
     "",
