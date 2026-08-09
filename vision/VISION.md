@@ -897,6 +897,24 @@ La recomendación de la otra IA tiene **un núcleo de verdad envuelto en un encu
 **Fecha:** 2026-08-02
 **Corrige:** DEC-LOGAN-012 (parcialmente — solo el proveedor; el principio de "100% mexicano con .mx directo" se mantiene, Neubox también lo cumple).
 
+#### DEC-LOGAN-016 — logancorp.mx como dominio corporativo + página showcase ilustrativa
+**Problema:** `logan.mx` no está disponible. Además, se necesita definir qué ES la página corporativa de LOGAN: ¿es un producto SaaS, o es un portfolio/showcase?
+**Alternativas:** (a) buscar otro dominio para "LOGAN" como SaaS; (b) usar `logancorp.mx` como página showcase ilustrativa para ventas B2B; (c) no tener página corporativa todavía.
+**Decisión:** **`logancorp.mx`** como dominio corporativo. La página será **meramente ilustrativa** — un showcase/portfolio futurista e innovador, NO un producto SaaS. Su función: cuando el usuario se presente con compañías a ofrecer servicios de sistematización y digitalización, les mostrará la página de LOGAN que incluirá enlaces a las páginas/aplicaciones/proyectos de los que LOGAN se ha hecho cargo (Mr. Trámite, Hércules Bro, futuros clientes). Diseño: muy innovador y futurista para llamar la atención desde el momento de ingreso.
+**Justificación:**
+- `logan.mx` no disponible — `logancorp.mx` transmite "corporación" (alinea con DEC-LOGAN-001: marca corporativa al final, pero la página puede existir como portfolio antes).
+- Página showcase, no SaaS: LOGAN no se vende como producto directamente todavía (DEC-LOGAN-001). Se vende como servicio personalizado (el usuario presenta LOGAN a compañías). La página es el "business card digital" — demuestra capacidad sin ser un self-service SaaS.
+- Diseño futurista: el diferenciador visual capta atención en la primera impresión, crítico para ventas B2B donde el usuario tiene 30 segundos para interesar al cliente.
+- Enlaces a proyectos: prueba social. Mostrar Mr. Trámite funcionando vale más que cualquier pitch deck.
+**Consecuencias:**
+- El dominio a registrar en Neubox es `logancorp.mx` (no `logan.mx`).
+- La página logancorp.mx debe diseñarse como showcase interactivo: hero futurista, animaciones, enlaces a proyectos LOGAN (mrtramite.vercel.app, futuros), explicación visual del ecosistema de 9 roles, bucle de hipótesis, Constitución.
+- La página NO tiene login, NO tiene self-service. Es puramente informativa + visual.
+- Deploy en Vercel (DEC-LOGAN-013: Vercel Pro) + dominio apuntando vía CNAME desde Neubox.
+- Esta página puede construirse cuando LOGAN tenga su primer caso de éxito público (Mr. Trámite con clientes) para que el "portfolio" tenga sustancia.
+**Fecha:** 2026-08-08
+**Corrige:** DEC-LOGAN-005/012/015 (parcialmente — cambia `logan.mx` por `logancorp.mx` como dominio corporativo).
+
 #### DEC-LOGAN-013 — Vercel Pro ($20 USD/mes) para producción de LOGAN OS
 **Problema:** Vercel Hobby (free) tiene timeout de 10s en funciones serverless, insuficiente para el flujo de 3 llamadas LLM de LOGAN (Core → Marketing → Core integra + validador = 30-50s por turno delegado).
 **Alternativas:** (a) Vercel Pro $20/mes (timeout 60s); (b) self-host en VPS (~$5-10/mes, administración manual); (c) optimizar el flujo a <10s (trabajo de desarrollo); (d) quitar la delegación a Marketing en producción.

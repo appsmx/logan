@@ -27,11 +27,11 @@
 | Dominio | Estado | Propósito | Proveedor |
 |---|---|---|---|
 | mrtramite.mx | Pendiente | Producto comercial prioritario | Neubox (DEC-LOGAN-015) |
-| logan.mx | Pendiente | Marca corporativa (Etapa 6) | Neubox |
+| logancorp.mx | Pendiente | Marca corporativa — página showcase ilustrativa (DEC-LOGAN-016) | Neubox |
 | herculesbro.mx | Pendiente | Segundo producto | Neubox |
 
 ## 4. Decisiones estratégicas
-15 decisiones vigentes (DEC-LOGAN-001 a 015). Ver `vision/VISION.md`.
+16 decisiones vigentes (DEC-LOGAN-001 a 016). Ver `vision/VISION.md`.
 
 ## 5. Hitos
 
