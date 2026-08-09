@@ -608,6 +608,9 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
   { key: "biblia", label: "Biblia", icon: "BookText", group: "PROYECTO", requiresProject: true },
   { key: "ciclo", label: "Ciclo metodológico", icon: "Repeat", group: "PROYECTO", requiresProject: true },
   { key: "sesion", label: "Sesión (PCS)", icon: "History", group: "PROYECTO", requiresProject: true },
+  { key: "dev", label: "Dev", icon: "Code2", group: "PROYECTO", requiresProject: true },
+  { key: "design", label: "Design", icon: "Palette", group: "PROYECTO", requiresProject: true },
+  { key: "analytics", label: "Analytics", icon: "BarChart2", group: "PROYECTO", requiresProject: true },
 ];
 
 // LML reference (kept for a small reference card).
