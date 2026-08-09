@@ -67,6 +67,12 @@ export type CoreAction =
       roleFilter?: string;   // optional: "marketing" | "dev" | "design" | "core"
       statusFilter?: string; // optional: "pendiente" | "refutada" | "verificada"
       brief?: string;
+    }
+  | {
+      // Finance — delegate financial analysis to the Finance specialist.
+      type: "finance_execute";
+      capability: string; // one of FINANCE_CAPABILITIES keys
+      brief: string;
     };
 
 /** Constitutional self-check that Core includes in its response. */
@@ -111,6 +117,13 @@ export type ActionTaken =
       type: "analytics_patterns";
       analyticsHypothesisId: string;
       hypothesesAnalyzed: number;
+      title: string;
+    }
+  | {
+      type: "finance_execute";
+      capability: string;
+      financeAssetId: string;
+      hypothesisId: string;
       title: string;
     };
 
@@ -160,4 +173,16 @@ export type AnalyticsDeliverable = {
   analyticsHypothesisId: string;
   hypothesesAnalyzed?: number; // only for patterns
   topLearnings?: string[];
+};
+
+
+/** A Finance specialist deliverable for the integration LLM call. */
+export type FinanceDeliverable = {
+  capability: string;
+  capabilityLabel: string;
+  title: string;
+  content: string;
+  hypothesisId: string;
+  financeAssetId: string;
+  hypothesis: { context: string; hypothesis: string; prediction: string };
 };
