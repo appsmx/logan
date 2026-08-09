@@ -172,7 +172,7 @@ async function executeOne(
 export async function executeActions(projectId: string, actions: CoreAction[], constitutional?: ConstitutionalCheck | null): Promise<ActionTaken[]> {
   const results: ActionTaken[] = [];
   for (const action of actions) {
-    if (["marketing_execute","dev_execute","design_execute","analytics_verify","analytics_patterns","finance_execute","legal_execute","support_execute"].includes(action.type)) continue;
+    if (["marketing_execute","dev_execute","design_execute","analytics_verify","analytics_patterns","finance_execute","legal_execute","support_execute","git_create_branch","git_write_file","git_create_pr","git_get_status"].includes(action.type)) continue;
     const r = await executeOne(projectId, action, constitutional);
     if (r) results.push(r);
   }

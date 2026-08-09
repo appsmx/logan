@@ -40,6 +40,32 @@ model Project {
   financeAssets   FinanceAsset[]
   legalAssets     LegalAsset[]
   supportAssets   SupportAsset[]
+  gitActions      GitAction[]
+}
+
+// LOGAN git tools — Task 23: persistent audit trail of every git action Core
+// takes against an allowed repository (git_create_branch | git_write_file |
+// git_create_pr | git_get_status). Each row is one action; status is
+// "pendiente" (just dispatched) → "creado" (GitHub API succeeded) | "fallido"
+// (safety rejection or GitHub API error). hypothesisId links the row to the
+// dev-role Hypothesis created for git_create_pr (DEC-LOGAN-004 — every PR
+// carries a hypothesis, no exceptions).
+model GitAction {
+  id            String   @id @default(cuid())
+  projectId     String
+  tool          String   // "git_create_branch" | "git_write_file" | "git_create_pr" | "git_get_status"
+  repo          String
+  branch        String?
+  path          String?
+  commitMessage String?
+  prNumber      Int?
+  prUrl         String?
+  hypothesisId  String?
+  status        String   @default("pendiente") // pendiente | creado | fallido
+  error         String?
+  createdAt     DateTime @default(now())
+
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 // LOGAN OS — the singleton Vision document (above the Constitution).

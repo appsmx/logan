@@ -85,6 +85,39 @@ export type CoreAction =
       type: "support_execute";
       capability: string; // one of SUPPORT_CAPABILITIES keys
       brief: string;
+    }
+  // ─── LOGAN git tools (Task 23) ────────────────────────────────────────────
+  | {
+      // git_create_branch — create a feature/* branch in an allowed repo.
+      type: "git_create_branch";
+      repo: string;
+      branchName: string;
+      fromBranch?: string;
+    }
+  | {
+      // git_write_file — create OR update a file in a non-protected branch.
+      type: "git_write_file";
+      repo: string;
+      branch: string;
+      path: string;
+      content: string;
+      commitMessage: string;
+    }
+  | {
+      // git_create_pr — open a PR from branch to main. Carries hypothesis (DEC-LOGAN-004).
+      type: "git_create_pr";
+      repo: string;
+      branch: string;
+      title: string;
+      body: string;
+      hypothesisContext: string;
+      hypothesis: string;
+      hypothesisPrediction: string;
+    }
+  | {
+      // git_get_status — read repo state (branches, open PRs, last commit). Read-only.
+      type: "git_get_status";
+      repo: string;
     };
 
 /** Constitutional self-check that Core includes in its response. */
@@ -151,6 +184,41 @@ export type ActionTaken =
       supportAssetId: string;
       hypothesisId: string;
       title: string;
+    }
+  // ─── LOGAN git tools — ActionTaken variants (Task 23) ─────────────────────
+  | {
+      type: "git_create_branch";
+      repo: string;
+      branchName: string;
+      sha?: string;
+      gitActionId: string;
+      status: string; // "creado" | "fallido"
+    }
+  | {
+      type: "git_write_file";
+      repo: string;
+      branch: string;
+      path: string;
+      gitActionId: string;
+      status: string;
+    }
+  | {
+      type: "git_create_pr";
+      repo: string;
+      branch: string;
+      prNumber?: number;
+      prUrl?: string;
+      hypothesisId?: string;
+      gitActionId: string;
+      status: string;
+    }
+  | {
+      type: "git_get_status";
+      repo: string;
+      branches?: string[];
+      openPRs?: { number: number; title: string; head: string }[];
+      gitActionId: string;
+      status: string;
     };
 
 /** The full payload returned by the POST /api/core endpoint. */

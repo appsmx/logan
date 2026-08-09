@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Send, User, ShieldAlert, Loader2, Sparkles } from "lucide-react";
+import { Brain, Send, User, ShieldAlert, Loader2, Sparkles, GitPullRequest, ExternalLink } from "lucide-react";
 import { useLoganStore } from "@/lib/store";
 import { SectionHeading } from "@/components/logan/SectionHeading";
 import { EmptyState } from "@/components/logan/EmptyState";
@@ -26,7 +26,11 @@ type ActionTaken = {
     | "analytics_patterns"
     | "finance_execute"
     | "legal_execute"
-    | "support_execute";
+    | "support_execute"
+    | "git_create_branch"
+    | "git_write_file"
+    | "git_create_pr"
+    | "git_get_status";
   decId?: string;
   id?: string;
   hypothesisId?: string;
@@ -40,6 +44,17 @@ type ActionTaken = {
   title?: string;
   verdict?: string;
   hypothesesAnalyzed?: number;
+  // ─── git action fields (Task 23) ────────────────────────────────────────
+  repo?: string;
+  branchName?: string;
+  branch?: string;
+  path?: string;
+  prNumber?: number;
+  prUrl?: string;
+  gitActionId?: string;
+  status?: string;
+  branches?: string[];
+  openPRs?: { number: number; title: string; head: string }[];
 };
 
 type CoreResponse = {
@@ -265,14 +280,36 @@ export function ChatSection() {
                         Registró:
                       </span>
                       {m.actions.map((a, i) => (
-                        <Badge
-                          key={i}
-                          variant="outline"
-                          className="gap-1 border-primary/30 bg-primary/5 text-[10px] font-normal"
-                        >
-                          <Sparkles className="h-3 w-3 text-primary" aria-hidden />
-                          {actionLabel(a)}
-                        </Badge>
+                        a.type === "git_create_pr" && a.prUrl ? (
+                          <a
+                            key={i}
+                            href={a.prUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-1 text-[10px] font-normal text-primary hover:border-primary/60 hover:bg-primary/10 transition"
+                          >
+                            <GitPullRequest className="h-3 w-3" aria-hidden />
+                            {actionLabel(a)}
+                            <ExternalLink className="h-2.5 w-2.5 opacity-60" aria-hidden />
+                          </a>
+                        ) : (
+                          <Badge
+                            key={i}
+                            variant="outline"
+                            className={
+                              a.type.startsWith("git_") && a.status === "fallido"
+                                ? "gap-1 border-destructive/40 bg-destructive/5 text-[10px] font-normal text-destructive"
+                                : "gap-1 border-primary/30 bg-primary/5 text-[10px] font-normal"
+                            }
+                          >
+                            {a.type.startsWith("git_") ? (
+                              <GitPullRequest className="h-3 w-3 text-primary" aria-hidden />
+                            ) : (
+                              <Sparkles className="h-3 w-3 text-primary" aria-hidden />
+                            )}
+                            {actionLabel(a)}
+                          </Badge>
+                        )
                       ))}
                     </div>
                   )}
@@ -363,11 +400,28 @@ function actionLabel(a: ActionTaken): string {
     const cap = SUPPORT_CAPABILITIES.find((c) => c.key === a.capability);
     return cap?.label || a.title || "Support";
   }
+  if (a.type === "git_create_branch") {
+    const status = a.status === "fallido" ? " (fallido)" : "";
+    return `Branch git: ${a.branchName || a.repo || "?"}${status}`;
+  }
+  if (a.type === "git_write_file") {
+    const status = a.status === "fallido" ? " (fallido)" : "";
+    return `Archivo git: ${a.path || "?"}${status}`;
+  }
+  if (a.type === "git_create_pr") {
+    const status = a.status === "fallido" ? " (fallido)" : "";
+    return `PR git #${a.prNumber ?? "?"} en ${a.repo || "?"}${status}`;
+  }
+  if (a.type === "git_get_status") {
+    const status = a.status === "fallido" ? " (fallido)" : "";
+    const count = a.branches ? ` (${a.branches.length} branches` + (a.openPRs ? `, ${a.openPRs.length} PRs)` : ")") : "";
+    return `Status git: ${a.repo || "?"}${count}${status}`;
+  }
   return a.title || a.type;
 }
 
 const SUGGESTIONS = [
+  "¿Qué estado tiene el repositorio de Mr. Trámite en GitHub?",
   "¿Qué deberíamos hacer primero?",
   "Propónme una campaña de Meta con su hipótesis.",
-  "¿Qué decisión importante falta por tomar?",
 ];

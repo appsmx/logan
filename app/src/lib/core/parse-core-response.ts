@@ -176,6 +176,35 @@ function asActions(value: unknown): CoreAction[] {
       out.push({ type: "legal_execute", capability: asString(a.capability, ""), brief: asString(a.brief) });
     } else if (type === "support_execute") {
       out.push({ type: "support_execute", capability: asString(a.capability, ""), brief: asString(a.brief) });
+    } else if (type === "git_create_branch") {
+      out.push({
+        type: "git_create_branch",
+        repo: asString(a.repo, ""),
+        branchName: asString(a.branchName, ""),
+        ...(typeof a.fromBranch === "string" && a.fromBranch.length > 0 ? { fromBranch: a.fromBranch } : {}),
+      });
+    } else if (type === "git_write_file") {
+      out.push({
+        type: "git_write_file",
+        repo: asString(a.repo, ""),
+        branch: asString(a.branch, ""),
+        path: asString(a.path, ""),
+        content: asString(a.content, ""),
+        commitMessage: asString(a.commitMessage, ""),
+      });
+    } else if (type === "git_create_pr") {
+      out.push({
+        type: "git_create_pr",
+        repo: asString(a.repo, ""),
+        branch: asString(a.branch, ""),
+        title: asString(a.title, ""),
+        body: asString(a.body, ""),
+        hypothesisContext: asString(a.hypothesisContext, ""),
+        hypothesis: asString(a.hypothesis, ""),
+        hypothesisPrediction: asString(a.hypothesisPrediction, ""),
+      });
+    } else if (type === "git_get_status") {
+      out.push({ type: "git_get_status", repo: asString(a.repo, "") });
     }
     // Unknown action types are silently dropped (Art. III — simplicity).
   }

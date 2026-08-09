@@ -39,6 +39,7 @@ import {
   executeLegalDelegations,
   executeSupportDelegations,
 } from "@/lib/core/execute-actions";
+import { executeGitActions } from "@/lib/git/execute-git-actions";
 import type {
   ActionTaken, ConstitutionalCheck, CoreEndpointResult,
   MarketingDeliverable, DevDeliverable, DesignDeliverable, AnalyticsDeliverable,
@@ -74,6 +75,10 @@ function buildDocumentsUpdated(actionsTaken: ActionTaken[]): { doc: string; chan
     if (a.type === "finance_execute") return a.hypothesisId ? [{ doc: "FinanceAsset", change: `${a.title} (HIP ${a.hypothesisId})` }] : [{ doc: "FinanceAsset", change: `Delegación ${a.capability} fallida` }];
     if (a.type === "legal_execute") return a.hypothesisId ? [{ doc: "LegalAsset", change: `${a.title} (HIP ${a.hypothesisId})` }] : [{ doc: "LegalAsset", change: `Delegación ${a.capability} fallida` }];
     if (a.type === "support_execute") return a.hypothesisId ? [{ doc: "SupportAsset", change: `${a.title} (HIP ${a.hypothesisId})` }] : [{ doc: "SupportAsset", change: `Delegación ${a.capability} fallida` }];
+    if (a.type === "git_create_branch") return [{ doc: "GitAction", change: `Branch ${a.branchName} en ${a.repo} — ${a.status}` }];
+    if (a.type === "git_write_file") return [{ doc: "GitAction", change: `Archivo ${a.path} en ${a.branch}@${a.repo} — ${a.status}` }];
+    if (a.type === "git_create_pr") return a.prUrl ? [{ doc: "GitAction", change: `PR #${a.prNumber} en ${a.repo} — ${a.status} (${a.prUrl})` }] : [{ doc: "GitAction", change: `PR en ${a.repo} — ${a.status} (fallido)` }];
+    if (a.type === "git_get_status") return [{ doc: "GitAction", change: `Status ${a.repo} — ${a.status}` }];
     return [];
   });
 }
@@ -157,7 +162,7 @@ export async function POST(req: NextRequest) {
   try { nonSpecialistActions = await executeActions(projectId, parsed.actions, constitutionalForPersistence); }
   catch (e) { console.error("[core] executeActions:", (e as Error).message); }
 
-  // Execute ALL specialist delegations in parallel (Marketing, Dev, Design, Analytics, Finance, Legal, Support).
+  // Execute ALL specialist delegations in parallel (Marketing, Dev, Design, Analytics, Finance, Legal, Support, Git).
   let marketingActionsTaken: ActionTaken[] = [], marketingDeliverables: MarketingDeliverable[] = [];
   let devActionsTaken: ActionTaken[] = [], devDeliverables: DevDeliverable[] = [];
   let designActionsTaken: ActionTaken[] = [], designDeliverables: DesignDeliverable[] = [];
@@ -165,9 +170,10 @@ export async function POST(req: NextRequest) {
   let financeActionsTaken: ActionTaken[] = [], financeDeliverables: FinanceDeliverable[] = [];
   let legalActionsTaken: ActionTaken[] = [], legalDeliverables: LegalDeliverable[] = [];
   let supportActionsTaken: ActionTaken[] = [], supportDeliverables: SupportDeliverable[] = [];
+  let gitActionsTaken: ActionTaken[] = [];
 
   try {
-    const [mkt, dev, des, ana, fin, leg, sup] = await Promise.all([
+    const [mkt, dev, des, ana, fin, leg, sup, git] = await Promise.all([
       executeMarketingDelegations(projectId, parsed.actions),
       executeDevDelegations(projectId, parsed.actions),
       executeDesignDelegations(projectId, parsed.actions),
@@ -175,6 +181,7 @@ export async function POST(req: NextRequest) {
       executeFinanceDelegations(projectId, parsed.actions),
       executeLegalDelegations(projectId, parsed.actions),
       executeSupportDelegations(projectId, parsed.actions),
+      executeGitActions(projectId, parsed.actions),
     ]);
     marketingActionsTaken = mkt.actionsTaken; marketingDeliverables = mkt.deliverables;
     devActionsTaken = dev.actionsTaken; devDeliverables = dev.deliverables;
@@ -183,9 +190,10 @@ export async function POST(req: NextRequest) {
     financeActionsTaken = fin.actionsTaken; financeDeliverables = fin.deliverables;
     legalActionsTaken = leg.actionsTaken; legalDeliverables = leg.deliverables;
     supportActionsTaken = sup.actionsTaken; supportDeliverables = sup.deliverables;
+    gitActionsTaken = git;
   } catch (e) { console.error("[core] Delegations:", (e as Error).message); }
 
-  const actionsTaken: ActionTaken[] = [...nonSpecialistActions, ...marketingActionsTaken, ...devActionsTaken, ...designActionsTaken, ...analyticsActionsTaken, ...financeActionsTaken, ...legalActionsTaken, ...supportActionsTaken];
+  const actionsTaken: ActionTaken[] = [...nonSpecialistActions, ...marketingActionsTaken, ...devActionsTaken, ...designActionsTaken, ...analyticsActionsTaken, ...financeActionsTaken, ...legalActionsTaken, ...supportActionsTaken, ...gitActionsTaken];
 
   const allDeliverables = [...marketingDeliverables, ...devDeliverables, ...designDeliverables, ...analyticsDeliverables, ...financeDeliverables, ...legalDeliverables, ...supportDeliverables];
   let finalResponse = parsed.response;

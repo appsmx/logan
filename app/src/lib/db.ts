@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client'
 // preserves `globalThis` across hot reloads, so without a version bump the old
 // instance (missing new model accessors like `legalAsset` / `supportAsset`)
 // would persist indefinitely.
-const SCHEMA_VERSION = 'v9_legal_support_c'
+const SCHEMA_VERSION = 'v10_git_tools_a'
 
 const KEY = `prisma_${SCHEMA_VERSION}`
 
@@ -22,6 +22,7 @@ export const db =
 const _dbAny = db as unknown as Record<string, unknown>
 console.log('[db.ts] db keys:', Object.keys(_dbAny).filter((k) => typeof _dbAny[k] === 'object').slice(0, 30))
 console.log('[db.ts] has legalAsset?', !!_dbAny.legalAsset, 'has supportAsset?', !!_dbAny.supportAsset, 'has financeAsset?', !!_dbAny.financeAsset, 'has marketingAsset?', !!_dbAny.marketingAsset)
+console.log('[db.ts] has gitAction?', !!_dbAny.gitAction)
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma[KEY] = db
 
