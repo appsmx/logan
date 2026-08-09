@@ -338,7 +338,7 @@ export const ROLES: Role[] = [
     key: "analytics",
     name: "Analytics",
     kind: "especialista",
-    status: "planificado",
+    status: "activo",
     color: "success",
     tagline: "Verifica las hipótesis. Cierra el bucle de aprendizaje.",
     responsibilities: [
@@ -686,4 +686,30 @@ export const DESIGN_ASSET_TYPES: Record<string, { label: string; color: string }
   design_handoff:     { label: "Handoff a Dev",            color: "warning"     },
   design_audit:       { label: "Auditoría de diseño",      color: "destructive" },
   image_asset_prompt: { label: "Prompt de imagen",         color: "success"     },
+};
+
+// ============================================================
+// ANALYTICS CAPABILITIES — Etapa Analytics
+// ============================================================
+export type AnalyticsCapability = {
+  key: string;
+  label: string;
+  description: string;
+  producesAssetType: string;
+};
+
+export const ANALYTICS_CAPABILITIES: AnalyticsCapability[] = [
+  { key: "verify_hypothesis",      label: "Verificar hipotesis",         description: "Evaluar si una hipotesis se cumplio, actualizar status, generar reporte de aprendizaje.",           producesAssetType: "verification_report"  },
+  { key: "analyze_patterns",       label: "Analizar patrones",           description: "Revisar todas las hipotesis de un proyecto y detectar tendencias de acierto/fallo.",               producesAssetType: "pattern_analysis"     },
+  { key: "extract_learnings",      label: "Extraer aprendizajes",        description: "Identificar aprendizajes universales aplicables a otros proyectos LOGAN (Art. VIII).",             producesAssetType: "learning_extraction"  },
+  { key: "recommend_adjustments",  label: "Recomendar ajustes",          description: "Proponer correcciones de estrategia basadas en hipotesis refutadas.",                              producesAssetType: "strategy_adjustment"  },
+  { key: "generate_learning_report", label: "Reporte de aprendizaje",   description: "Resumen completo del estado de hipotesis del proyecto con insights accionables.",                  producesAssetType: "learning_report"      },
+];
+
+export const ANALYTICS_ASSET_TYPES: Record<string, { label: string; color: string }> = {
+  verification_report:  { label: "Reporte de verificacion", color: "success"     },
+  pattern_analysis:     { label: "Analisis de patrones",    color: "primary"     },
+  learning_extraction:  { label: "Extraccion de aprendizaje", color: "warning"   },
+  strategy_adjustment:  { label: "Ajuste de estrategia",    color: "destructive" },
+  learning_report:      { label: "Reporte de aprendizaje",  color: "muted"       },
 };
