@@ -2,111 +2,126 @@
 
 **Proyecto:** LOGAN OS (desarrollo del ecosistema)
 **Metodología:** LOGAN v1.0
-**Estado:** Etapa 4.5 cerrada. LOGAN OS tiene cuatro agentes funcionales (Core + Marketing + Dev + Design). App publicada en repo GitHub. Etapa 4 conectada con Mr. Trámite real.
-**Avance:** Esta sesión cerró la Etapa 4.5, activando LOGAN Dev (POST /api/dev/execute, 11 capabilities) y LOGAN Design (POST /api/design/execute, 8 capabilities). Ambos siguen el patrón de Marketing: endpoint + system-prompt + parser defensivo + hipótesis obligatoria. Prisma schema extendido con DevAsset y DesignAsset. LOGAN ahora tiene 5 agentes activos.
+**Estado:** Analytics funcional. LOGAN OS tiene 6 agentes activos. El bucle de aprendizaje está completo.
+**Avance:** Esta sesión activó LOGAN Analytics (POST /api/analytics/verify + POST /api/analytics/patterns). El bucle DEC-LOGAN-004 está cerrado: cualquier hipótesis de Marketing, Dev o Design puede ahora ser verificada por Analytics, generando aprendizajes y actualizando el status de la hipótesis en la BD.
 
 ---
 
 ## Objetivo completado en esta sesión
 
-Activar LOGAN Dev y LOGAN Design como especialistas funcionales del ecosistema LOGAN OS.
+Implementar LOGAN Analytics como especialista funcional que cierra el bucle de aprendizaje de LOGAN OS.
 
 **Construido:**
-- **LOGAN Dev funcional** (`POST /api/dev/execute`): 11 capabilities técnicas. Genera código production-grade, diseña arquitectura, refactoriza, escribe tests, revisa código, debuggea, define schemas Prisma, crea scaffolds, documenta, optimiza performance, revisa seguridad. Cada entregable nace con hipótesis técnica verificable (DEC-LOGAN-004).
-- **LOGAN Design funcional** (`POST /api/design/execute`): 8 capabilities de diseño. Diseña UIs, define sistemas visuales, prototipa flujos, valida usabilidad, genera assets visuales, produce handoffs, audita diseño, genera prompts de imagen. Cada entregable nace con hipótesis de diseño verificable.
-- `app/src/lib/dev/` — types.ts, system-prompt.ts, parse-dev-response.ts
-- `app/src/lib/design/` — types.ts, system-prompt.ts, parse-design-response.ts
-- `roles/dev/ROLE.md` — documento completo del rol Dev v1.0
-- `roles/design/ROLE.md` — actualizado a v1.0 funcional con capabilities
-- `os/ROLES.md` — Dev y Design marcados como activos con endpoint documentado
-- `os/ECOSYSTEM.md` — hito Etapa 4.5 registrado, tabla de agentes actualizada
-- `prisma/schema.prisma` — modelos DevAsset y DesignAsset añadidos
-- `app/src/lib/logan-os-data.ts` — DEV_CAPABILITIES (11), DESIGN_CAPABILITIES (8), ROLES status actualizado
+- **POST /api/analytics/verify** — Verifica una hipótesis individual. Recibe `projectId + hypothesisId + outcome + evidence`, llama al LLM para evaluar el veredicto, actualiza la hipótesis en la BD (`verificada` o `refutada`), persiste el aprendizaje y genera la hipótesis de Analytics sobre el propio resultado.
+- **POST /api/analytics/patterns** — Analiza patrones de todas las hipótesis de un proyecto. Detecta tendencias de acierto/fallo, extrae aprendizajes universales (candidatos a `LOGAN.md` via Art. VIII), genera reporte completo.
+- `app/src/lib/analytics/` — types.ts, system-prompt.ts, parse-analytics-response.ts
+- `roles/analytics/ROLE.md` — documento completo v1.0 con capabilities, mandato típico, entregable típico, ciclo de aprendizaje
+- `os/ROLES.md` v0.3 — Analytics marcado activo con endpoints documentados
+- `os/ECOSYSTEM.md` v0.3 — hito Analytics añadido, tabla de agentes actualizada
+- `app/src/lib/logan-os-data.ts` — ANALYTICS_CAPABILITIES (5), status activo
 
-**Patrón de los especialistas (consistente en los 3 roles activos):**
+**El bucle de aprendizaje completo (DEC-LOGAN-004):**
 ```
-POST /api/{role}/execute
-  → buildSystemPrompt(biblia, capability, brief)
-  → ZAI.chat.completions (Claude Sonnet)
-  → parseResponse (defensivo, nunca lanza)
-  → db.hypothesis.create (roleId="{role}", status="pendiente")
-  → db.{role}Asset.create (linked to hypothesis)
-  → return { title, content, hypothesis, assetId, hypothesisId }
+Especialista (Marketing/Dev/Design) genera hipótesis → pendiente
+        ↓
+Acción real del mundo (campaña, código, diseño implementado)
+        ↓
+POST /api/analytics/verify (outcome + evidencia)
+        ↓
+LLM evalúa veredicto → verificada | refutada
+        ↓
+Hypothesis.status actualizado en BD
+        ↓
+Aprendizaje extraído + hipótesis de Analytics generada
+        ↓
+¿isUniversal? → candidato a LOGAN.md (Art. VIII)
+        ↓
+Siguiente decisión del especialista es más informada
 ```
+
+---
+
+## Estado del ecosistema
+
+| Agente | Endpoints | Status |
+|---|---|---|
+| Core | POST /api/core | activo |
+| Memory | en app | activo |
+| Marketing | POST /api/marketing/execute (11 caps) | activo |
+| Dev | POST /api/dev/execute (11 caps) | activo |
+| Design | POST /api/design/execute (8 caps) | activo |
+| **Analytics** | POST /api/analytics/verify + POST /api/analytics/patterns (5 caps) | **activo — nuevo** |
+| Finance | — | planificado |
+| Legal | — | planificado |
+| Support | — | planificado |
 
 ---
 
 ## Decisiones tomadas
 
-15 decisiones estratégicas previas siguen vigentes (DEC-LOGAN-001 a 015).
-No se tomaron nuevas decisiones estratégicas en esta sesión.
+Sin nuevas decisiones estratégicas en esta sesión. Las 15 DEC-LOGAN-001 a 015 siguen vigentes.
 
 ---
 
 ## Documentos actualizados
 
-| Documento | Dónde | Qué cambió |
-|---|---|---|
-| `roles/dev/ROLE.md` | Repo | v0.1 (planificado) → v1.0 (activo), capabilities completas |
-| `roles/design/ROLE.md` | Repo | v0.1 (activo definición) → v1.0 (activo funcional), capabilities completas |
-| `os/ROLES.md` | Repo | Dev y Design marcados activos, endpoints documentados |
-| `os/ECOSYSTEM.md` | Repo | Hito Etapa 4.5 añadido, tabla agentes actualizada |
-| `app/src/lib/dev/` | Repo | Directorio nuevo: types.ts, system-prompt.ts, parse-dev-response.ts |
-| `app/src/lib/design/` | Repo | Directorio nuevo: types.ts, system-prompt.ts, parse-design-response.ts |
-| `app/src/app/api/dev/execute/route.ts` | Repo | Endpoint nuevo — LOGAN Dev funcional |
-| `app/src/app/api/design/execute/route.ts` | Repo | Endpoint nuevo — LOGAN Design funcional |
-| `app/src/lib/logan-os-data.ts` | Repo | DEV_CAPABILITIES, DESIGN_CAPABILITIES, ROLES status |
-| `app/prisma/schema.prisma` | Repo | Modelos DevAsset y DesignAsset añadidos |
-| `docs/SESSION_CONTEXT.md` | Repo | Este documento |
+| Documento | Qué cambió |
+|---|---|
+| `roles/analytics/ROLE.md` | v0.1 (planificado) → v1.0 (activo), completo |
+| `app/src/lib/analytics/types.ts` | Nuevo — tipos de Analytics |
+| `app/src/lib/analytics/system-prompt.ts` | Nuevo — builders de prompt para verify y patterns |
+| `app/src/lib/analytics/parse-analytics-response.ts` | Nuevo — parsers defensivos |
+| `app/src/app/api/analytics/verify/route.ts` | Nuevo — endpoint de verificación |
+| `app/src/app/api/analytics/patterns/route.ts` | Nuevo — endpoint de análisis de patrones |
+| `app/src/lib/logan-os-data.ts` | ANALYTICS_CAPABILITIES + status activo |
+| `os/ROLES.md` | v0.3 — Analytics activo con endpoints |
+| `os/ECOSYSTEM.md` | v0.3 — hito Analytics, tabla agentes |
+| `docs/SESSION_CONTEXT.md` | Este documento |
 
 ---
 
 ## Pendientes
 
-1. **Migrar SQLite → Postgres** para deploy en Vercel Pro (DEC-LOGAN-013). Cambio de una línea en `prisma/schema.prisma` + variable de entorno `DATABASE_URL`.
-2. **Conectar Dev y Design al flujo de delegación de Core** — agregar `dev_execute` y `design_execute` como action types en `app/src/lib/core/types.ts`, igual que `marketing_execute` en Etapa 3.
-3. **UI para Dev y Design** — secciones en la app (sidebar + vistas) similares a la sección Marketing.
-4. **Analytics funcional** — el rol que verifica hipótesis. Necesario para cerrar el bucle de aprendizaje de Dev, Design y Marketing.
-5. **Módulo Asistente IA** (`templates/asistente-ia`) — plantilla reutilizable para bots WhatsApp.
-6. **Optimizar latencia** del flujo 3-LLM (30-50s). Paralelizar llamadas, cachear system prompts.
-7. **Hércules Bro** — Etapa 5.
-8. **LOGAN corporativo en logan.mx** — Etapa 6.
+1. **UI para Dev, Design y Analytics** — secciones en la app para visualizar entregables (DevAsset, DesignAsset) y verificar hipótesis desde la interfaz.
+2. **Conectar Analytics al flujo de Core** — agregar `analytics_verify` y `analytics_patterns` como action types para que Core pueda delegar a Analytics directamente.
+3. **Migrar SQLite → Postgres** para deploy en Vercel Pro (DEC-LOGAN-013). Una línea en `prisma/schema.prisma`.
+4. **Finance, Legal, Support** — los 3 roles restantes.
+5. **Etapa 5: Hércules Bro**.
+6. **Etapa 6: LOGAN corporativo en logan.mx**.
 
 ---
 
 ## Riesgos identificados
 
-- **Dev y Design no están conectados al flujo de delegación de Core todavía.** Core puede llamarlos directamente vía fetch interno, pero no hay action type `dev_execute` / `design_execute` en core/types.ts. Requiere una sesión de integración.
-- **Prisma schema actualizado pero sin migración ejecutada.** Las tablas DevAsset y DesignAsset no existen en la BD hasta correr `prisma migrate dev`.
-- **Latencia 30-50s en turnos delegados** (3 llamadas LLM secuenciales). Mitigación futura: paralelización.
+- **Analytics no está conectado al flujo de Core todavía.** Los endpoints existen y son funcionales, pero Core no emite `analytics_verify` / `analytics_patterns` actions. Requiere una sesión de integración.
+- **Prisma schema sin migración ejecutada.** DevAsset y DesignAsset no existen en BD hasta `prisma migrate dev`.
+- **Latencia 30-50s en turnos delegados** (múltiples LLM calls). Mitigación futura: paralelización.
 - **Tier gratuito de Z.ai tiene rate limits.** Mitigación: migrar a API pagada cuando haya ingresos.
-- **Faltan 4 roles para LOGAN completo** (Analytics, Finance, Legal, Support).
 
 ---
 
 ## Próximo objetivo
 
-El usuario debe elegir el siguiente paso. Opciones:
+El usuario debe elegir el siguiente paso:
 
-- **Opción A (recomendada): Conectar Dev + Design al flujo de Core** — agregar `dev_execute` y `design_execute` como action types, para que Core pueda delegar trabajo técnico y de diseño igual que delega a Marketing.
-- **Opción B: UI para Dev y Design** — secciones en la app con sus capabilities y entregables.
-- **Opción C: Analytics funcional** — el rol que verifica hipótesis y cierra el bucle de aprendizaje.
-- **Opción D: Migrar SQLite → Postgres** y hacer deploy en Vercel Pro.
+- **Opción A (recomendada): UI para Dev, Design y Analytics** — secciones en la app para ver entregables y verificar hipótesis desde la interfaz. Sin UI, los endpoints existen pero el usuario no puede usarlos cómodamente.
+- **Opción B: Conectar Analytics a Core** — action types `analytics_verify` / `analytics_patterns` para que Core pueda delegar verificaciones directamente.
+- **Opción C: Migrar SQLite → Postgres** y hacer deploy real en Vercel Pro.
+- **Opción D: Finance funcional** — el rol de decisiones de dinero.
 
-Recomendación: **A primero** (conectar Dev+Design a Core). Sin eso, los endpoints existen pero Core no los usa automáticamente.
+Recomendación: **A primero** (UI). El sistema es ahora suficientemente capaz para que una buena UI lo haga usable en la práctica.
 
 ---
 
 ## Observaciones
 
-- **LOGAN OS tiene ahora 5 agentes activos:** Core, Memory, Marketing, Dev, Design.
-- **El patrón de especialistas está consolidado.** Agregar un nuevo rol (Analytics, Finance, etc.) es mecánico: crear `lib/{role}/`, `api/{role}/execute/route.ts`, añadir capabilities a `logan-os-data.ts`, actualizar ROLES.md y ECOSYSTEM.md.
-- **Dev y Design siguen exactamente el mismo patrón que Marketing** (Art. III — simplicidad, reutilización del patrón). El bucle de hipótesis se preserva en todos los casos.
-- **El repo `github.com/appsmx/logan` está actualizado** con todos los archivos de esta sesión.
+- **LOGAN OS tiene 6 agentes activos.** El bucle de aprendizaje (DEC-LOGAN-004) está operativo de extremo a extremo.
+- **El patrón de especialistas está completamente consolidado.** Agregar Finance, Legal o Support es mecánico: `lib/{role}/`, `api/{role}/execute/`, capabilities en `logan-os-data.ts`, ROLE.md, ROLES.md, ECOSYSTEM.md.
+- **Analytics es diferente a los demás especialistas**: no genera nuevos assets sino que verifica hipótesis existentes y actualiza su status en la BD. Los endpoints son READ+WRITE sobre la tabla `Hypothesis`.
 
 ---
 
 *Generado por: PCS (Protocolo de Continuidad de Sesión, LOGAN §10)*
 *Fecha: 2026-08-08*
 *Próxima sesión: leer `LOGAN.md` + `vision/VISION.md` + este `docs/SESSION_CONTEXT.md` antes de producir cualquier resultado (LOGAN §3.2).*
-*Sesión cerrada con Etapa 4.5 completa — Dev + Design funcionales.*
+*Sesión cerrada con Analytics funcional — bucle de aprendizaje completo.*
