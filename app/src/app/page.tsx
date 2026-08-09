@@ -17,6 +17,9 @@ import { MemorySection } from "@/components/logan/sections/MemorySection";
 import { ChatSection } from "@/components/logan/sections/ChatSection";
 import { HypothesesSection } from "@/components/logan/sections/HypothesesSection";
 import { MarketingSection } from "@/components/logan/sections/MarketingSection";
+import { DevSection } from "@/components/logan/sections/DevSection";
+import { DesignSection } from "@/components/logan/sections/DesignSection";
+import { AnalyticsSection } from "@/components/logan/sections/AnalyticsSection";
 import { DecisionsSection } from "@/components/logan/sections/DecisionsSection";
 import { DiscoveriesSection } from "@/components/logan/sections/DiscoveriesSection";
 import { AuditSection } from "@/components/logan/sections/AuditSection";
@@ -34,6 +37,9 @@ const SECTIONS: Record<string, React.ComponentType> = {
   hablar: ChatSection,
   hipotesis: HypothesesSection,
   marketing: MarketingSection,
+  dev: DevSection,
+  design: DesignSection,
+  analytics: AnalyticsSection,
   decisiones: DecisionsSection,
   descubrimientos: DiscoveriesSection,
   auditoria: AuditSection,
