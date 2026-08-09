@@ -1,18 +1,10 @@
 // LOGAN Core — shared types for the POST /api/core endpoint.
 //
-// Core is the orchestrator of LOGAN OS (Etapa 2). It receives a user message,
-// reads its Constitution + LOGAN OS manual + Roles + the project's Biblia +
-// an auto-generated Memory Report, decides, returns a structured JSON response,
-// which the backend then persists and validates against the Constitution.
+// Etapa 2: single-LLM orchestrator.
+// Etapa 3: marketing_execute delegation added.
+// Etapa 4.5: dev_execute + design_execute delegation added.
 //
-// Etapa 3 (LOGAN Marketing) extension: Core now emits a new action type
-// `marketing_execute` to delegate real marketing work to the Marketing
-// specialist endpoint (POST /api/marketing/execute). The backend executes
-// those delegations, then runs a SECOND Core LLM call to integrate the
-// specialist deliverables into a single LOGAN-voice response.
-//
-// These types are deliberately portable (Art. III — simplicity) and not tied
-// to any LLM SDK or framework.
+// These types are deliberately portable (Art. III — simplicity).
 
 import type { Project } from "@prisma/client";
 
@@ -38,7 +30,7 @@ export type CoreAction =
     }
   | {
       type: "marketing_proposal"; // LEGACY — Core improvising. Kept for backward compat.
-      capability: string; // MARKETING_CAPABILITIES key
+      capability: string;
       title: string;
       content: string;
       hypothesisContext: string;
@@ -49,13 +41,25 @@ export type CoreAction =
       // Etapa 3 — delegate to the real Marketing specialist endpoint.
       type: "marketing_execute";
       capability: string; // one of MARKETING_CAPABILITIES keys
-      brief: string; // restated user request with context
+      brief: string;
+    }
+  | {
+      // Etapa 4.5 — delegate to the real Dev specialist endpoint.
+      type: "dev_execute";
+      capability: string; // one of DEV_CAPABILITIES keys
+      brief: string;
+    }
+  | {
+      // Etapa 4.5 — delegate to the real Design specialist endpoint.
+      type: "design_execute";
+      capability: string; // one of DESIGN_CAPABILITIES keys
+      brief: string;
     };
 
 /** Constitutional self-check that Core includes in its response. */
 export type ConstitutionalCheck = {
   approved: boolean;
-  violated_article: string | null; // roman numeral e.g. "III", or null
+  violated_article: string | null;
   note: string;
 };
 
@@ -79,18 +83,27 @@ export type CoreResponse = {
 export type ActionTaken =
   | { type: "register_decision"; decId: string; id: string }
   | { type: "register_hypothesis"; id: string }
+  | { type: "marketing_proposal"; hypothesisId: string; marketingAssetId: string }
   | {
-      type: "marketing_proposal";
-      hypothesisId: string;
-      marketingAssetId: string;
-    }
-  | {
-      // Etapa 3 — Marketing specialist delegation. The Marketing endpoint
-      // already persisted the Hypothesis + MarketingAsset; Core just records
-      // the IDs for the UI to render the badge.
       type: "marketing_execute";
       capability: string;
       marketingAssetId: string;
+      hypothesisId: string;
+      title: string;
+    }
+  | {
+      // Etapa 4.5
+      type: "dev_execute";
+      capability: string;
+      devAssetId: string;
+      hypothesisId: string;
+      title: string;
+    }
+  | {
+      // Etapa 4.5
+      type: "design_execute";
+      capability: string;
+      designAssetId: string;
       hypothesisId: string;
       title: string;
     };
@@ -113,11 +126,7 @@ export type ProjectBibliaContext = Pick<
   "id" | "name" | "vision" | "users" | "status" | "currentPhase" | "currentMode"
 >;
 
-/**
- * A Marketing specialist deliverable that Core receives back from the
- * Marketing endpoint during the integration step. Used internally by the
- * Core route when running the second "integration" LLM call.
- */
+/** A Marketing specialist deliverable for the integration LLM call. */
 export type MarketingDeliverable = {
   capability: string;
   capabilityLabel: string;
@@ -125,9 +134,27 @@ export type MarketingDeliverable = {
   content: string;
   hypothesisId: string;
   marketingAssetId: string;
-  hypothesis: {
-    context: string;
-    hypothesis: string;
-    prediction: string;
-  };
+  hypothesis: { context: string; hypothesis: string; prediction: string };
+};
+
+/** A Dev specialist deliverable for the integration LLM call. */
+export type DevDeliverable = {
+  capability: string;
+  capabilityLabel: string;
+  title: string;
+  content: string;
+  hypothesisId: string;
+  devAssetId: string;
+  hypothesis: { context: string; hypothesis: string; prediction: string };
+};
+
+/** A Design specialist deliverable for the integration LLM call. */
+export type DesignDeliverable = {
+  capability: string;
+  capabilityLabel: string;
+  title: string;
+  content: string;
+  hypothesisId: string;
+  designAssetId: string;
+  hypothesis: { context: string; hypothesis: string; prediction: string };
 };
