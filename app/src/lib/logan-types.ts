@@ -161,3 +161,14 @@ export type DesignAsset = {
   createdAt: string;
   hypothesis?: Hypothesis | null;
 };
+
+export type FinanceAsset = {
+  id: string;
+  projectId: string;
+  type: string;
+  title: string;
+  content: string;
+  hypothesisId: string | null;
+  createdAt: string;
+  hypothesis?: Hypothesis | null;
+};
