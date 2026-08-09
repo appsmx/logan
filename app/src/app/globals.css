@@ -151,3 +151,160 @@
 .logan-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
 }
+
+/* ════════════════════════════════════════════════════════════════════ */
+/*  LOGAN Showcase — futuristic animations                                  */
+/* ══════════════════════════════════════════════════════════════════════ */
+
+/* Force dark for /showcase regardless of next-themes */
+.showcase-shell {
+  background: oklch(0.12 0.008 60);
+  color: oklch(0.93 0.012 75);
+  --sc-bg: oklch(0.12 0.008 60);
+  --sc-fg: oklch(0.93 0.012 75);
+  --sc-amber: oklch(0.78 0.16 65);
+  --sc-amber-soft: oklch(0.72 0.14 50);
+  --sc-terra: oklch(0.62 0.13 35);
+  --sc-muted: oklch(0.65 0.012 70);
+  --sc-line: oklch(0.28 0.012 60 / 60%);
+}
+
+/* Animated grid background — subtle, performant (CSS only) */
+.sc-grid-bg {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, oklch(0.28 0.012 60 / 22%) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.28 0.012 60 / 22%) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, black 30%, transparent 75%);
+  pointer-events: none;
+}
+
+.sc-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+@keyframes sc-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 oklch(0.78 0.16 65 / 0.55), 0 0 40px 4px oklch(0.72 0.14 50 / 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 14px oklch(0.78 0.16 65 / 0), 0 0 80px 12px oklch(0.72 0.14 50 / 0.55);
+  }
+}
+.sc-pulse-glow {
+  animation: sc-pulse-glow 3.2s ease-in-out infinite;
+}
+
+@keyframes sc-float-up {
+  0% { transform: translateY(20vh) scale(0.7); opacity: 0; }
+  10% { opacity: 0.7; }
+  90% { opacity: 0.5; }
+  100% { transform: translateY(-120vh) scale(1.1); opacity: 0; }
+}
+.sc-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: oklch(0.85 0.18 70 / 0.8);
+  box-shadow: 0 0 8px 2px oklch(0.78 0.16 65 / 0.6);
+  animation: sc-float-up linear infinite;
+  pointer-events: none;
+}
+
+@keyframes sc-orbit {
+  from { transform: rotate(0deg) translateX(var(--orbit-r)) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(var(--orbit-r)) rotate(-360deg); }
+}
+.sc-orbit-node {
+  animation: sc-orbit linear infinite;
+}
+
+@keyframes sc-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.sc-shimmer-text {
+  background: linear-gradient(
+    100deg,
+    oklch(0.93 0.012 75) 30%,
+    oklch(0.85 0.16 65) 50%,
+    oklch(0.93 0.012 75) 70%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: sc-shimmer 6s linear infinite;
+}
+
+@keyframes sc-line-flow {
+  0% { stroke-dashoffset: 24; opacity: 0.3; }
+  50% { opacity: 0.9; }
+  100% { stroke-dashoffset: 0; opacity: 0.3; }
+}
+.sc-flow-line {
+  stroke-dasharray: 4 4;
+  animation: sc-line-flow 2.4s ease-in-out infinite;
+}
+
+@keyframes sc-breathe {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+.sc-breathe {
+  animation: sc-breathe 3.5s ease-in-out infinite;
+}
+
+.sc-glass {
+  background: oklch(0.18 0.012 60 / 55%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid oklch(0.32 0.012 60 / 50%);
+}
+.sc-glass-hover {
+  transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+.sc-glass-hover:hover {
+  border-color: oklch(0.72 0.14 50 / 80%);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px -8px oklch(0.72 0.14 50 / 35%);
+}
+
+.sc-amber-glow {
+  text-shadow: 0 0 24px oklch(0.78 0.16 65 / 0.45);
+}
+
+.sc-section {
+  scroll-margin-top: 80px;
+}
+
+.sc-gradient-divider {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    oklch(0.72 0.14 50 / 50%),
+    transparent
+  );
+}
+
+/* Custom warm scrollbar inside chat */
+.sc-chat-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sc-chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sc-chat-scroll::-webkit-scrollbar-thumb {
+  background: oklch(0.32 0.012 60 / 80%);
+  border-radius: 9999px;
+}

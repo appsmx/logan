@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useTheme } from "next-themes";
-import { Sun, Moon, Menu, Waypoints } from "lucide-react";
+import { Sun, Moon, Menu, Waypoints, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProjectSelector } from "./ProjectSelector";
 import { ModeBadge } from "./ModeBadge";
@@ -91,6 +92,18 @@ export function Header() {
           >
             <Waypoints className="size-4 text-primary" />
             Generar PCS
+          </Button>
+          <Button
+            asChild
+            size="sm"
+            variant="ghost"
+            className="hidden sm:inline-flex h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+            aria-label="Ver página pública showcase"
+          >
+            <Link href="/showcase">
+              Showcase
+              <ExternalLink className="size-3.5" />
+            </Link>
           </Button>
           <Button
             size="icon"
