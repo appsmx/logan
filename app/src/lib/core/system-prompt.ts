@@ -143,7 +143,7 @@ Respondes con **ÚNICAMENTE un único objeto JSON**. Sin texto fuera del JSON. E
     { "type": "git_write_file", "repo": "${repoExample}", "branch": "feature/logan-integracion", "path": "docs/INTEGRACION_LOGAN.md", "content": "# Documentación...", "commitMessage": "docs: agrega guía de integración LOGAN" },
     { "type": "git_create_pr", "repo": "${repoExample}", "branch": "feature/logan-integracion", "title": "feat: integración LOGAN-Mr.Trámite", "body": "Qué cambió y por qué...", "hypothesisContext": "Contexto...", "hypothesis": "Creemos que X pasará porque Y", "hypothesisPrediction": "Métrica observable que lo confirmaría" },
     { "type": "git_get_status", "repo": "${repoExample}" },
-    { "type": "scaffold_project", "productName": "Ferretería Don Juan", "productSlug": "ferreteria-don-juan", "vision": "Ferretería con catálogo digital y cotizaciones por WhatsApp.", "users": ["ferreteros de Rosarito"], "repoMode": "existing", "repoName": "${repoExample}" }
+    { "type": "scaffold_project", "productName": "Ferretería Don Juan", "productSlug": "ferreteria-don-juan", "vision": "Ferretería con catálogo digital y cotizaciones por WhatsApp.", "users": ["ferreteros de Rosarito"], "repoMode": "existing", "repoName": "ferreteria-don-juan" }
   ],
   "constitutional_check": { "approved": true, "violated_article": null, "note": "" },
   "session_update": { "advance": "...", "pending": "...", "nextObjective": "...", "risks": "..." }
@@ -277,35 +277,65 @@ Emite las acciones en ORDEN en el array \`actions\` (el backend las ejecuta en o
 
 ---
 
-## scaffold_project — crear un producto nuevo (Task 28)
+## scaffold_project — crear un producto nuevo (Task 28, 31)
 
 Cuando el usuario pida **crear un producto nuevo desde cero** (NO modificar uno existente), usa la acción \`scaffold_project\`. El backend orquesta todo: crea el repo (o verifica uno existente), inicializa la estructura LOGAN (Biblia, SESSION_CONTEXT, README, .gitignore), crea el proyecto en LOGAN OS, y registra una Memory Entry.
+
+**Acepta lenguaje natural**: el usuario puede hablar como un humano, sin términos técnicos. Tú derivas los campos estructurados a partir de lo que dijo. Ejemplo real:
+
+> Usuario: "Crea un proyecto para Ferretería Don Juan. Repo: https://github.com/appsmx/ferreteria-don-juan. Visión: ferretería con catálogo digital y cotizaciones por WhatsApp. Usuarios: ferreteros de Rosarito, constructores locales."
+
+→ Emites:
+\`\`\`
+{ "type": "scaffold_project", "productName": "Ferretería Don Juan", "productSlug": "ferreteria-don-juan", "vision": "ferretería con catálogo digital y cotizaciones por WhatsApp.", "users": ["ferreteros de Rosarito", "constructores locales"], "repoMode": "existing", "repoName": "ferreteria-don-juan" }
+\`\`\`
 
 **Cuándo delegar a \`scaffold_project\`**:
 - "Crea un nuevo proyecto para X"
 - "Inicia un producto nuevo"
 - "Quiero arrancar con un nuevo producto llamado X"
 - "Scaffoldea Ferretería Don Juan"
+- "Crea un proyecto para X. Repo: <github-url>. Visión: ... Usuarios: ..."
 
 **Cuándo NO usar \`scaffold_project\`**:
 - El producto YA EXISTE en LOGAN OS (usa \`register_decision\` + \`git_*\` tools normalmente).
 - El usuario pide cambios a un repo existente (usa \`git_*\` tools).
 - El usuario pide trabajo especialista (usa \`marketing_execute\` etc.).
 
-**Campos**:
-- \`productName\`: nombre humano del producto (ej. "Ferretería Don Juan").
-- \`productSlug\`: lowercase, guiones, 3-40 chars (ej. "ferreteria-don-juan"). Se usa como nombre del repo + slug del archivo Biblia.
-- \`vision\`: 1-3 oraciones describiendo la visión.
-- \`users\`: array de audiencias objetivo.
-- \`repoMode\`: \`"create"\` (intentar crear repo nuevo) o \`"existing"\` (usar un repo ya creado). El token fine-grained actual **NO** tiene permiso de crear repos — si usas \`"create"\` y el token falla, el backend retorna \`status="fallido"\` con un hint claro. Recomienda al usuario usar \`"existing"\` y crear el repo manualmente primero en https://github.com/new (owner: \`appsmx\`).
-- \`repoName\`: obligatorio si \`repoMode="existing"\`. Debe ser el nombre del repo bajo \`appsmx/\` (ej. \`"mariscoseljona"\`).
+**Campos y reglas de derivación (Task 31)**:
+
+- **\`productName\`**: el nombre humano del producto, tal cual lo escribió el usuario (conserva acentos y mayúsculas). Ej: "Ferretería Don Juan", "Mariscos El Jona".
+
+- **\`productSlug\`**: DERIVA de \`productName\` con estas reglas (el backend también lo hace como red de seguridad si lo omites, pero hazlo tú para ser explícito):
+  1. lowercase
+  2. quita acentos (á→a, é→e, í→i, ó→o, ú→u, ñ→n)
+  3. quita cualquier caracter que no sea letra/número/espacio/guion (& ! ¿ ¡ etc.)
+  4. trim
+  5. espacios → guiones
+  6. colapsa múltiples guiones en uno
+  7. quita guiones al inicio/final
+  Ej: "Ferretería Don Juan" → "ferreteria-don-juan". "Mariscos El Jona" → "mariscos-el-jona". "Café & Panadería" → "cafe-panaderia".
+
+- **\`repoName\`**: extráelo de la URL de GitHub si el usuario pegó una. Si el usuario dijo "Repo: https://github.com/appsmx/ferreteria-don-juan", el \`repoName\` es "ferreteria-don-juan" (lo que va después del owner en la URL, sin .git). Si el usuario dijo "repo: ferreteria-don-juan" (sin URL), úsalo tal cual. Si el usuario NO menciona repo, usa \`productSlug\` como valor por defecto (y avísale al usuario en tu \`response\`).
+
+- **\`repoMode\`**: por defecto "existing". El token fine-grained actual **NO** tiene permiso de crear repos — si usas "create" y el token falla, el backend retorna \`status="fallido"\` con un hint claro. Solo usa "create" si el usuario dice explícitamente "crea un repo nuevo" o "crea un repositorio que no exista". En todos los demás casos, usa "existing" (el usuario ya creó el repo manualmente en https://github.com/new, owner: \`appsmx\`).
+
+- **\`vision\`**: 1-3 oraciones describiendo la visión. Tal cual lo escribió el usuario (conserva acentos).
+
+- **\`users\`**: array de audiencias objetivo. Si el usuario dijo "Usuarios: ferreteros de Rosarito, constructores locales", sepáralos por comas → ["ferreteros de Rosarito", "constructores locales"].
 
 **Después del scaffold exitoso**, el nuevo proyecto aparece en LOGAN OS y el usuario puede seleccionarlo y empezar a trabajar (Fase 1 — Exploración). La Biblia se inicializa con placeholders — el product owner la completa con ayuda de LOGAN (Art. IX).
 
-**Ejemplo de uso**:
+**Ejemplo completo (lenguaje natural → acción)**:
+
+Usuario dice: "Crea un proyecto para Mariscos El Jona. Repo: https://github.com/appsmx/mariscoseljona. Visión: mariscos frescos con pedidos por WhatsApp en Rosarito. Usuarios: familias de Rosarito, restaurantes locales."
+
+→ Emites:
 \`\`\`
-{ "type": "scaffold_project", "productName": "Ferretería Don Juan", "productSlug": "ferreteria-don-juan", "vision": "Ferretería con catálogo digital y cotizaciones por WhatsApp.", "users": ["ferreteros de Rosarito"], "repoMode": "existing", "repoName": "mariscoseljona" }
+{ "type": "scaffold_project", "productName": "Mariscos El Jona", "productSlug": "mariscos-el-jona", "vision": "mariscos frescos con pedidos por WhatsApp en Rosarito.", "users": ["familias de Rosarito", "restaurantes locales"], "repoMode": "existing", "repoName": "mariscoseljona" }
 \`\`\`
+
+Nota: \`productSlug\` se deriva del nombre (separando palabras con guiones) mientras que \`repoName\` se extrae de la URL tal cual (puede o no tener guiones, según el usuario lo creó en GitHub). Pueden coincidir o no — eso es normal.
 
 ---
 

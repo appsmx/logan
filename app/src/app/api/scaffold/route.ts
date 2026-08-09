@@ -29,6 +29,7 @@ import { db } from "@/lib/db";
 import { createRepo, verifyExistingRepo } from "@/lib/scaffold/repo-creator";
 import { initializeStructure } from "@/lib/scaffold/structure-initializer";
 import { addAllowedRepo } from "@/lib/scaffold/allowed-repos";
+import { deriveRepoName, deriveSlug } from "@/lib/scaffold/slug";
 import type { ScaffoldError, ScaffoldRequest, ScaffoldResult } from "@/lib/scaffold/types";
 
 const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
@@ -39,17 +40,31 @@ function fail(code: ScaffoldError["code"], error: string, status: number, hint?:
 
 function validateInput(body: Partial<ScaffoldRequest>): ScaffoldRequest | { error: ScaffoldError } {
   const productName = (body.productName || "").trim();
-  const productSlug = (body.productSlug || "").trim().toLowerCase();
+  // Task 31 — defensive slug derivation: if the caller (Core or direct API)
+  // omitted productSlug, derive it from productName. This is the safety net
+  // behind the system-prompt teaching (Core is told to derive the slug itself,
+  // but we also handle the case where it forgets or sends a partial payload).
+  let productSlug = (body.productSlug || "").trim().toLowerCase();
+  if (!productSlug && productName) {
+    productSlug = deriveSlug(productName);
+  }
   const vision = (body.vision || "").trim();
   const users = Array.isArray(body.users) ? body.users.filter((u): u is string => typeof u === "string" && u.trim().length > 0) : [];
   const repoMode = body.repoMode;
-  const repoName = (body.repoName || "").trim().toLowerCase();
+  // Task 31 — defensive repoName extraction: if the caller sent a full GitHub
+  // URL (e.g. "https://github.com/appsmx/ferreteria-don-juan") instead of the
+  // bare repo name, extract the repo segment. Bare names are normalized too.
+  let repoName = "";
+  if (body.repoName && typeof body.repoName === "string" && body.repoName.trim().length > 0) {
+    repoName = deriveRepoName(body.repoName.trim());
+  }
 
   if (!productName) {
     return { error: { ok: false, code: "INVALID_INPUT", error: "productName es obligatorio." } };
   }
   if (!productSlug) {
-    return { error: { ok: false, code: "INVALID_INPUT", error: "productSlug es obligatorio.", hint: "Debe ser lowercase con guiones, 3-40 caracteres. Ej: 'ferreteria-don-juan'." } };
+    // Could happen if productName has no usable chars (e.g. only emoji).
+    return { error: { ok: false, code: "INVALID_INPUT", error: "No se pudo derivar productSlug a partir de productName.", hint: "Debe ser lowercase con guiones, 3-40 caracteres. Ej: 'ferreteria-don-juan'." } };
   }
   if (!SLUG_REGEX.test(productSlug)) {
     return { error: { ok: false, code: "INVALID_INPUT", error: `productSlug inválido: "${productSlug}".`, hint: "Debe empezar y terminar con letra o número, solo lowercase y guiones, 3-40 caracteres. Ej: 'ferreteria-don-juan'." } };
@@ -201,12 +216,12 @@ export async function GET() {
     endpoint: "POST /api/scaffold",
     description: "Crea un nuevo producto LOGAN end-to-end: repo + estructura LOGAN + Biblia inicial + Memory Entry.",
     bodySchema: {
-      productName: "string (req) — nombre humano del producto",
-      productSlug: "string (req) — lowercase, guiones, 3-40 chars (se usa como repo name + Biblia slug)",
+      productName: "string (req) — nombre humano del producto (ej: 'Ferretería Don Juan')",
+      productSlug: "string (opcional) — lowercase, guiones, 3-40 chars. Si se omite, se deriva de productName (Task 31).",
       vision: "string (req) — visión del producto (1-3 oraciones)",
       users: "string[] (req) — usuarios objetivo",
-      repoMode: '"create" | "existing" (req)',
-      repoName: "string (req si repoMode=existing) — nombre del repo existente bajo appsmx/",
+      repoMode: '"create" | "existing" (req) — por defecto "existing" en el prompt de Core',
+      repoName: "string (req si repoMode=existing) — nombre del repo existente bajo appsmx/. Acepta una URL de GitHub completa (se extrae el segmento) o un nombre bare.",
     },
     notes: [
       "Art. III (simplicidad): scaffolding crea la ESTRUCTURA, no el contenido.",
@@ -214,6 +229,7 @@ export async function GET() {
       "Art. IX (humano decide): el product owner completa la Biblia con detalles reales.",
       "El token fine-grained actual NO tiene permiso de crear repos — si repoMode=create falla con REPO_CREATE_FORBIDDEN, crea el repo manualmente y usa repoMode=existing.",
       "Después del scaffold, el nuevo repo se agrega a la lista in-memory de permitidos — las herramientas git funcionan sin reiniciar el server.",
+      "Task 31: el endpoint acepta lenguaje natural indirectamente — Core deriva los campos estructurados y los envía. Defensivamente, si productSlug se omite, se deriva de productName; si repoName es una URL de GitHub, se extrae el segmento.",
     ],
   });
 }
