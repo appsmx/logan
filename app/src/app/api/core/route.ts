@@ -1,26 +1,24 @@
 // LOGAN Core — POST /api/core
 //
 // Etapa 2: single-LLM orchestrator.
-// Etapa 3: marketing_execute delegation (3-LLM flow).
-// Etapa 4.5: dev_execute + design_execute delegation added.
+// Etapa 3: marketing_execute delegation.
+// Etapa 4.5: dev_execute + design_execute delegation.
+// Analytics: analytics_verify + analytics_patterns delegation added.
 //
 // Flow:
-//   1. Validate body { projectId, message }.
-//   2. Load the project from the DB.
-//   3. Build the auto-generated Memory Report.
-//   4. Build the system prompt.
-//   5. First Core LLM call → the plan (response draft + actions).
-//   6. Parse JSON defensively.
-//   7. Draft constitutional validation (before persisting actions).
-//   8. Execute non-specialist actions (register_decision, register_hypothesis).
-//   9. Execute specialist delegations IN PARALLEL:
+//   1-6. Validate → Load project → Memory Report → System prompt → LLM call → Parse.
+//   7. Draft constitutional validation.
+//   8. Execute non-specialist actions.
+//   9. Execute ALL specialist delegations IN PARALLEL:
 //        a. marketing_execute → Marketing endpoint
 //        b. dev_execute       → Dev endpoint
 //        c. design_execute    → Design endpoint
-//  10. If any specialist deliverables: second Core LLM call (integration).
-//  11. Final constitutional validation on the integrated response.
-//  12. Persist SessionContext row.
-//  13. Return structured payload.
+//        d. analytics_verify  → Analytics verify endpoint
+//        e. analytics_patterns → Analytics patterns endpoint
+//  10. If any deliverables: integration LLM call.
+//  11. Final constitutional validation.
+//  12. Persist SessionContext.
+//  13. Return.
 
 import { NextRequest, NextResponse } from "next/server";
 import ZAI from "z-ai-web-dev-sdk";
@@ -35,14 +33,11 @@ import {
   executeMarketingDelegations,
   executeDevDelegations,
   executeDesignDelegations,
+  executeAnalyticsDelegations,
 } from "@/lib/core/execute-actions";
 import type {
-  ActionTaken,
-  ConstitutionalCheck,
-  CoreEndpointResult,
-  MarketingDeliverable,
-  DevDeliverable,
-  DesignDeliverable,
+  ActionTaken, ConstitutionalCheck, CoreEndpointResult,
+  MarketingDeliverable, DevDeliverable, DesignDeliverable, AnalyticsDeliverable,
   ProjectBibliaContext,
 } from "@/lib/core/types";
 
@@ -51,7 +46,6 @@ type CoreRequestBody = { projectId?: string; message?: string };
 function badRequest(error: string, hint?: string) {
   return NextResponse.json({ error, ...(hint ? { hint } : {}) }, { status: 400 });
 }
-
 function unavailable() {
   return NextResponse.json({ error: "LOGAN Core no disponible en este momento" }, { status: 503 });
 }
@@ -66,82 +60,43 @@ function buildDocumentsUpdated(actionsTaken: ActionTaken[]): { doc: string; chan
   return actionsTaken.flatMap((a) => {
     if (a.type === "register_decision") return [{ doc: "Decision", change: `${a.decId} creada` }];
     if (a.type === "register_hypothesis") return [{ doc: "Hypothesis", change: `HIP ${a.id} creada (pendiente)` }];
-    if (a.type === "marketing_proposal") return [
-      { doc: "Hypothesis", change: `HIP ${a.hypothesisId} creada para Marketing` },
-      { doc: "MarketingAsset", change: `Asset ${a.marketingAssetId}` },
-    ];
-    if (a.type === "marketing_execute") return a.hypothesisId
-      ? [{ doc: "MarketingAsset", change: `${a.title} (HIP ${a.hypothesisId})` }]
-      : [{ doc: "MarketingAsset", change: `Delegación ${a.capability} fallida` }];
-    if (a.type === "dev_execute") return a.hypothesisId
-      ? [{ doc: "DevAsset", change: `${a.title} (HIP ${a.hypothesisId})` }]
-      : [{ doc: "DevAsset", change: `Delegación ${a.capability} fallida` }];
-    if (a.type === "design_execute") return a.hypothesisId
-      ? [{ doc: "DesignAsset", change: `${a.title} (HIP ${a.hypothesisId})` }]
-      : [{ doc: "DesignAsset", change: `Delegación ${a.capability} fallida` }];
+    if (a.type === "marketing_proposal") return [{ doc: "Hypothesis", change: `HIP ${a.hypothesisId} creada para Marketing` }, { doc: "MarketingAsset", change: `Asset ${a.marketingAssetId}` }];
+    if (a.type === "marketing_execute") return a.hypothesisId ? [{ doc: "MarketingAsset", change: `${a.title} (HIP ${a.hypothesisId})` }] : [{ doc: "MarketingAsset", change: `Delegación ${a.capability} fallida` }];
+    if (a.type === "dev_execute") return a.hypothesisId ? [{ doc: "DevAsset", change: `${a.title} (HIP ${a.hypothesisId})` }] : [{ doc: "DevAsset", change: `Delegación ${a.capability} fallida` }];
+    if (a.type === "design_execute") return a.hypothesisId ? [{ doc: "DesignAsset", change: `${a.title} (HIP ${a.hypothesisId})` }] : [{ doc: "DesignAsset", change: `Delegación ${a.capability} fallida` }];
+    if (a.type === "analytics_verify") return a.verdict ? [{ doc: "Hypothesis", change: `HIP ${a.hypothesisId} → ${a.verdict}` }] : [{ doc: "Hypothesis", change: "Verificación fallida" }];
+    if (a.type === "analytics_patterns") return [{ doc: "AnalyticsReport", change: `${a.title} (${a.hypothesesAnalyzed} hipótesis)` }];
     return [];
   });
 }
 
 function decisionsFromActions(actionsTaken: ActionTaken[]): string[] {
-  return actionsTaken
-    .filter((a): a is Extract<ActionTaken, { type: "register_decision" }> => a.type === "register_decision")
-    .map((a) => a.decId);
+  return actionsTaken.filter((a): a is Extract<ActionTaken,{type:"register_decision"}> => a.type === "register_decision").map((a) => a.decId);
 }
 
-// ─── Integration prompt builders ────────────────────────────────────────────
+// ─── Integration prompt ──────────────────────────────────────────────────────
 
-const INTEGRATION_SYSTEM_PROMPT = `Eres LOGAN Core. Recibiste el trabajo de uno o varios especialistas (Marketing, Dev, Design) y debes integrarlo en una respuesta coherente al usuario, en tu única voz LOGAN. NO inventes; si el especialista no lo dijo, no lo agregues. Cita el entregable cuando sea relevante. Respeta los 10 artículos de la Constitución, en particular Art. IX (arquitecto colaborador, no decides por el humano) y Art. VII (señala riesgos con fundamento). Responde en español, cálida y directamente. NO uses bloques de markdown ni JSON — responde en texto natural al usuario.`;
+const INTEGRATION_SYSTEM_PROMPT = `Eres LOGAN Core. Recibiste el trabajo de uno o varios especialistas (Marketing, Dev, Design, Analytics) y debes integrarlo en una respuesta coherente al usuario, en tu única voz LOGAN. NO inventes. Cita el entregable cuando sea relevante. Art. IX (arquitecto colaborador) y Art. VII (señala riesgos). Responde en español, cálida y directamente. NO uses JSON — texto natural.`;
 
-function renderDeliverable(
-  index: number,
-  role: string,
-  capabilityLabel: string,
-  capability: string,
-  title: string,
-  content: string,
-  hypothesis: { context: string; hypothesis: string; prediction: string },
-): string[] {
-  return [
-    "",
-    `### Entregable ${index + 1} [${role}]: ${capabilityLabel} (${capability})`,
-    "",
-    `**Título:** ${title}`,
-    "",
-    "**Contenido:**",
-    "",
-    content,
-    "",
-    "**Hipótesis (DEC-LOGAN-004):**",
-    `- Contexto: ${hypothesis.context}`,
-    `- Hipótesis: ${hypothesis.hypothesis}`,
-    `- Predicción: ${hypothesis.prediction}`,
-  ];
+function renderDeliverable(i: number, role: string, label: string, capability: string, title: string, content: string, hyp: { context: string; hypothesis: string; prediction: string }): string[] {
+  return ["", `### Entregable ${i + 1} [${role}]: ${label} (${capability})`, "", `**Título:** ${title}`, "", "**Contenido:**", "", content, "", "**Hipótesis (DEC-LOGAN-004):**", `- Contexto: ${hyp.context}`, `- Hipótesis: ${hyp.hypothesis}`, `- Predicción: ${hyp.prediction}`];
 }
 
 function buildIntegrationUserPrompt(
-  originalUserMessage: string,
-  marketing: MarketingDeliverable[],
-  dev: DevDeliverable[],
-  design: DesignDeliverable[],
+  msg: string,
+  marketing: MarketingDeliverable[], dev: DevDeliverable[],
+  design: DesignDeliverable[], analytics: AnalyticsDeliverable[],
 ): string {
-  const lines: string[] = ["## Mensaje original del usuario", "", originalUserMessage, "", "## Entregables de los especialistas"];
+  const lines: string[] = ["## Mensaje original del usuario", "", msg, "", "## Entregables de los especialistas"];
   let i = 0;
-  for (const d of marketing) {
-    lines.push(...renderDeliverable(i++, "Marketing", d.capabilityLabel, d.capability, d.title, d.content, d.hypothesis));
+  for (const d of marketing) lines.push(...renderDeliverable(i++, "Marketing", d.capabilityLabel, d.capability, d.title, d.content, d.hypothesis));
+  for (const d of dev) lines.push(...renderDeliverable(i++, "Dev", d.capabilityLabel, d.capability, d.title, d.content, d.hypothesis));
+  for (const d of design) lines.push(...renderDeliverable(i++, "Design", d.capabilityLabel, d.capability, d.title, d.content, d.hypothesis));
+  for (const d of analytics) {
+    lines.push("", `### Entregable ${i++ + 1} [Analytics]: ${d.kind === "verify" ? "Verificación" : "Análisis de patrones"}`, "", `**Título:** ${d.title}`, "", "**Reporte:**", "", d.content);
+    if (d.topLearnings?.length) lines.push("", "**Aprendizajes clave:**", ...d.topLearnings.map((l) => `- ${l}`));
   }
-  for (const d of dev) {
-    lines.push(...renderDeliverable(i++, "Dev", d.capabilityLabel, d.capability, d.title, d.content, d.hypothesis));
-  }
-  for (const d of design) {
-    lines.push(...renderDeliverable(i++, "Design", d.capabilityLabel, d.capability, d.title, d.content, d.hypothesis));
-  }
-  lines.push(
-    "",
-    "## Tu tarea",
-    "",
-    "Escribe la respuesta final al usuario. Integra todos los entregables en una sola voz LOGAN, cálida, clara y específica al proyecto. Menciona las hipótesis relevantes para que el usuario sepa qué predicciones verificar. NO repitas los entregables crudos — sintetízalos en lenguaje natural.",
-  );
+  lines.push("", "## Tu tarea", "", "Integra todos los entregables en una sola voz LOGAN, cálida, clara y específica al proyecto. Para los entregables de Analytics, destaca el veredicto y el aprendizaje. NO repitas el contenido crudo — sintetiza en lenguaje natural.");
   return lines.join("\n");
 }
 
@@ -149,173 +104,100 @@ function buildIntegrationUserPrompt(
 
 export async function POST(req: NextRequest) {
   let body: CoreRequestBody;
-  try {
-    body = (await req.json().catch(() => ({}))) as CoreRequestBody;
-  } catch {
-    return badRequest("Cuerpo de la petición inválido");
-  }
+  try { body = (await req.json().catch(() => ({}))) as CoreRequestBody; }
+  catch { return badRequest("Cuerpo de la petición inválido"); }
 
   const projectId = (body.projectId || "").trim();
   const message = (body.message || "").trim();
   if (!projectId) return badRequest("Proyecto no encontrado", "Crea o selecciona un proyecto primero");
   if (!message) return badRequest("Mensaje vacío");
 
-  // Load project.
   let project;
-  try {
-    project = await db.project.findUnique({ where: { id: projectId } });
-  } catch (e) {
-    console.error("[core] DB error:", (e as Error).message);
-    return unavailable();
-  }
+  try { project = await db.project.findUnique({ where: { id: projectId } }); }
+  catch (e) { console.error("[core] DB:", (e as Error).message); return unavailable(); }
   if (!project) return badRequest("Proyecto no encontrado", "Crea o selecciona un proyecto primero");
 
-  // Step 1: Memory Report.
   let memoryReport: string;
-  try {
-    memoryReport = await buildMemoryReport(projectId);
-  } catch (e) {
-    console.error("[core] Memory Report falló:", (e as Error).message);
-    memoryReport = "## Reporte de Memory\n\n> No se pudo generar el reporte.";
-  }
+  try { memoryReport = await buildMemoryReport(projectId); }
+  catch (e) { console.error("[core] Memory falló:", (e as Error).message); memoryReport = "## Reporte de Memory\n\n> No se pudo generar el reporte."; }
 
-  // Step 2: System prompt.
-  const biblia: ProjectBibliaContext = {
-    id: project.id, name: project.name, vision: project.vision,
-    users: project.users, status: project.status,
-    currentPhase: project.currentPhase, currentMode: project.currentMode,
-  };
+  const biblia: ProjectBibliaContext = { id: project.id, name: project.name, vision: project.vision, users: project.users, status: project.status, currentPhase: project.currentPhase, currentMode: project.currentMode };
   const systemPrompt = buildSystemPrompt(biblia, memoryReport);
 
-  // Step 3: First Core LLM call.
   let rawText: string;
   try {
     const zai = await ZAI.create();
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: "assistant", content: systemPrompt },
-        { role: "user", content: message },
-      ],
-      thinking: { type: "disabled" },
-    });
+    const completion = await zai.chat.completions.create({ messages: [{ role: "assistant", content: systemPrompt }, { role: "user", content: message }], thinking: { type: "disabled" } });
     rawText = completion.choices[0]?.message?.content ?? "";
     if (!rawText?.trim()) { console.error("[core] LLM vacío"); return unavailable(); }
-  } catch (e) {
-    console.error("[core] Z.ai falló:", (e as Error).message);
-    return unavailable();
-  }
+  } catch (e) { console.error("[core] Z.ai:", (e as Error).message); return unavailable(); }
 
-  // Step 4: Parse.
   const parsed = parseCoreResponse(rawText);
 
-  // Step 5: Draft constitutional validation.
   let draftConstitutional: ConstitutionalCheck | null = null;
-  try {
-    draftConstitutional = await validateConstitutional(parsed.response);
-  } catch (e) {
-    console.error("[core] Draft validator falló:", (e as Error).message);
-  }
-  const constitutionalForPersistence: ConstitutionalCheck | null =
-    draftConstitutional?.approved === false ? draftConstitutional : null;
+  try { draftConstitutional = await validateConstitutional(parsed.response); }
+  catch (e) { console.error("[core] Draft validator:", (e as Error).message); }
+  const constitutionalForPersistence = draftConstitutional?.approved === false ? draftConstitutional : null;
 
-  // Step 6: Execute non-specialist actions.
   let nonSpecialistActions: ActionTaken[] = [];
-  try {
-    nonSpecialistActions = await executeActions(projectId, parsed.actions, constitutionalForPersistence);
-  } catch (e) {
-    console.error("[core] executeActions falló:", (e as Error).message);
-  }
+  try { nonSpecialistActions = await executeActions(projectId, parsed.actions, constitutionalForPersistence); }
+  catch (e) { console.error("[core] executeActions:", (e as Error).message); }
 
-  // Step 7: Execute ALL specialist delegations in parallel.
-  let marketingActionsTaken: ActionTaken[] = [];
-  let marketingDeliverables: MarketingDeliverable[] = [];
-  let devActionsTaken: ActionTaken[] = [];
-  let devDeliverables: DevDeliverable[] = [];
-  let designActionsTaken: ActionTaken[] = [];
-  let designDeliverables: DesignDeliverable[] = [];
+  // Execute ALL specialist delegations in parallel (now includes Analytics).
+  let marketingActionsTaken: ActionTaken[] = [], marketingDeliverables: MarketingDeliverable[] = [];
+  let devActionsTaken: ActionTaken[] = [], devDeliverables: DevDeliverable[] = [];
+  let designActionsTaken: ActionTaken[] = [], designDeliverables: DesignDeliverable[] = [];
+  let analyticsActionsTaken: ActionTaken[] = [], analyticsDeliverables: AnalyticsDeliverable[] = [];
 
   try {
-    const [mkt, dev, des] = await Promise.all([
+    const [mkt, dev, des, ana] = await Promise.all([
       executeMarketingDelegations(projectId, parsed.actions),
       executeDevDelegations(projectId, parsed.actions),
       executeDesignDelegations(projectId, parsed.actions),
+      executeAnalyticsDelegations(projectId, parsed.actions),
     ]);
-    marketingActionsTaken = mkt.actionsTaken;
-    marketingDeliverables = mkt.deliverables;
-    devActionsTaken = dev.actionsTaken;
-    devDeliverables = dev.deliverables;
-    designActionsTaken = des.actionsTaken;
-    designDeliverables = des.deliverables;
-  } catch (e) {
-    console.error("[core] Specialist delegations falló:", (e as Error).message);
-  }
+    marketingActionsTaken = mkt.actionsTaken; marketingDeliverables = mkt.deliverables;
+    devActionsTaken = dev.actionsTaken; devDeliverables = dev.deliverables;
+    designActionsTaken = des.actionsTaken; designDeliverables = des.deliverables;
+    analyticsActionsTaken = ana.actionsTaken; analyticsDeliverables = ana.deliverables;
+  } catch (e) { console.error("[core] Delegations:", (e as Error).message); }
 
-  const actionsTaken: ActionTaken[] = [
-    ...nonSpecialistActions,
-    ...marketingActionsTaken,
-    ...devActionsTaken,
-    ...designActionsTaken,
-  ];
+  const actionsTaken: ActionTaken[] = [...nonSpecialistActions, ...marketingActionsTaken, ...devActionsTaken, ...designActionsTaken, ...analyticsActionsTaken];
 
-  // Step 8: Integration LLM call if there are any specialist deliverables.
-  const allDeliverables = [
-    ...marketingDeliverables,
-    ...devDeliverables,
-    ...designDeliverables,
-  ];
+  const allDeliverables = [...marketingDeliverables, ...devDeliverables, ...designDeliverables, ...analyticsDeliverables];
   let finalResponse = parsed.response;
 
   if (allDeliverables.length > 0) {
     try {
       const zai = await ZAI.create();
-      const integrationPrompt = buildIntegrationUserPrompt(message, marketingDeliverables, devDeliverables, designDeliverables);
-      const completion = await zai.chat.completions.create({
-        messages: [
-          { role: "assistant", content: INTEGRATION_SYSTEM_PROMPT },
-          { role: "user", content: integrationPrompt },
-        ],
-        thinking: { type: "disabled" },
-      });
+      const integrationPrompt = buildIntegrationUserPrompt(message, marketingDeliverables, devDeliverables, designDeliverables, analyticsDeliverables);
+      const completion = await zai.chat.completions.create({ messages: [{ role: "assistant", content: INTEGRATION_SYSTEM_PROMPT }, { role: "user", content: integrationPrompt }], thinking: { type: "disabled" } });
       const integrated = completion.choices[0]?.message?.content ?? "";
-      if (integrated?.trim()) {
-        finalResponse = integrated.trim();
-      } else {
-        console.error("[core] Integration LLM vacío, usando draft");
-      }
+      if (integrated?.trim()) finalResponse = integrated.trim();
+      else console.error("[core] Integration LLM vacío, usando draft");
     } catch (e) {
-      console.error("[core] Integration LLM falló:", (e as Error).message);
+      console.error("[core] Integration falló:", (e as Error).message);
       finalResponse = parsed.response + "\n\n---\n⚠️ No pude integrar el entregable del especialista (fallo técnico). El entregable SÍ se creó — puedes revisarlo en la sección correspondiente. Elevo esta degradación al criterio humano (Art. VII).";
     }
   }
 
-  // Step 9: Final constitutional validation.
   let constitutional: ConstitutionalCheck = draftConstitutional ?? parsed.constitutional_check;
   try {
-    const validatorResult = await validateConstitutional(finalResponse);
-    if (validatorResult?.approved === false) constitutional = validatorResult;
-    if (draftConstitutional?.approved === false && (!validatorResult || validatorResult.approved === true)) {
-      constitutional = draftConstitutional;
-    }
-    if (constitutional?.approved === false) {
-      finalResponse = appendConstitutionalNote(finalResponse, constitutional.violated_article, constitutional.note);
-    }
-  } catch (e) {
-    console.error("[core] Validator falló:", (e as Error).message);
-  }
+    const v = await validateConstitutional(finalResponse);
+    if (v?.approved === false) constitutional = v;
+    if (draftConstitutional?.approved === false && (!v || v.approved === true)) constitutional = draftConstitutional;
+    if (constitutional?.approved === false) finalResponse = appendConstitutionalNote(finalResponse, constitutional.violated_article, constitutional.note);
+  } catch (e) { console.error("[core] Validator:", (e as Error).message); }
 
-  // Step 10: Persist SessionContext.
-  const decisionsTaken = decisionsFromActions(actionsTaken);
-  const documentsUpdated = buildDocumentsUpdated(actionsTaken);
   let sessionId = "";
   try {
     const session = await db.sessionContext.create({
       data: {
-        projectId,
-        status: project.status,
+        projectId, status: project.status,
         advance: parsed.session_update.advance || "Sesión de Core",
         objectiveCompleted: finalResponse.slice(0, 200),
-        decisionsTaken: JSON.stringify(decisionsTaken),
-        documentsUpdated: JSON.stringify(documentsUpdated),
+        decisionsTaken: JSON.stringify(decisionsFromActions(actionsTaken)),
+        documentsUpdated: JSON.stringify(buildDocumentsUpdated(actionsTaken)),
         pending: parsed.session_update.pending || "",
         risks: parsed.session_update.risks || "",
         nextObjective: parsed.session_update.nextObjective || "",
@@ -323,20 +205,11 @@ export async function POST(req: NextRequest) {
       },
     });
     sessionId = session.id;
-  } catch (e) {
-    console.error("[core] SessionContext persist falló:", (e as Error).message);
-  }
+  } catch (e) { console.error("[core] SessionContext:", (e as Error).message); }
 
-  // Step 11: Return.
-  const result: CoreEndpointResult = {
-    response: finalResponse,
-    actionsTaken,
-    constitutionalCheck: {
-      approved: constitutional.approved,
-      violatedArticle: constitutional.violated_article,
-      note: constitutional.note,
-    },
+  return NextResponse.json({
+    response: finalResponse, actionsTaken,
+    constitutionalCheck: { approved: constitutional.approved, violatedArticle: constitutional.violated_article, note: constitutional.note },
     sessionId,
-  };
-  return NextResponse.json(result);
+  } as CoreEndpointResult);
 }
