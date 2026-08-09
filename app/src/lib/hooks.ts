@@ -19,6 +19,8 @@ import type {
   Hypothesis,
   MemoryEntry,
   MarketingAsset,
+  DevAsset,
+  DesignAsset,
   HypothesisInput,
 } from "@/lib/logan-types";
 
@@ -35,6 +37,8 @@ const qk = {
   hypotheses: (pid: string) => ["hypotheses", pid] as const,
   memory: (pid: string) => ["memory", pid] as const,
   marketing: (pid: string) => ["marketing", pid] as const,
+  dev: (pid: string) => ["dev", pid] as const,
+  design: (pid: string) => ["design", pid] as const,
 };
 
 // ---------- Projects ----------
@@ -425,6 +429,72 @@ export function useDeleteMarketing(pid: string) {
       api(`/api/marketing/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.marketing(pid) });
+      qc.invalidateQueries({ queryKey: qk.hypotheses(pid) });
+    },
+  });
+}
+
+// ---------- Dev ----------
+export function useDev(pid: string | null) {
+  return useQuery<DevAsset[]>({
+    queryKey: pid ? qk.dev(pid) : ["dev", "none"],
+    queryFn: () => (pid ? api<DevAsset[]>(`/api/projects/${pid}/dev`) : Promise.resolve([])),
+    enabled: !!pid,
+    placeholderData: [],
+  } as UseQueryOptions<DevAsset[]>);
+}
+
+export function useCreateDev(pid: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { type: string; title: string; content: string; hypothesis?: HypothesisInput }) =>
+      api<DevAsset>(`/api/projects/${pid}/dev`, { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.dev(pid) });
+      qc.invalidateQueries({ queryKey: qk.hypotheses(pid) });
+    },
+  });
+}
+
+export function useDeleteDev(pid: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/dev/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.dev(pid) });
+      qc.invalidateQueries({ queryKey: qk.hypotheses(pid) });
+    },
+  });
+}
+
+// ---------- Design ----------
+export function useDesign(pid: string | null) {
+  return useQuery<DesignAsset[]>({
+    queryKey: pid ? qk.design(pid) : ["design", "none"],
+    queryFn: () => (pid ? api<DesignAsset[]>(`/api/projects/${pid}/design`) : Promise.resolve([])),
+    enabled: !!pid,
+    placeholderData: [],
+  } as UseQueryOptions<DesignAsset[]>);
+}
+
+export function useCreateDesign(pid: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { type: string; title: string; content: string; hypothesis?: HypothesisInput }) =>
+      api<DesignAsset>(`/api/projects/${pid}/design`, { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.design(pid) });
+      qc.invalidateQueries({ queryKey: qk.hypotheses(pid) });
+    },
+  });
+}
+
+export function useDeleteDesign(pid: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/design/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.design(pid) });
       qc.invalidateQueries({ queryKey: qk.hypotheses(pid) });
     },
   });
