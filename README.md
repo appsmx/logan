@@ -8,15 +8,15 @@ Repositorio oficial de la metodología LOGAN — marco metodológico para el dis
 
 ## Punto de entrada (para IA y humanos)
 
-Este repositorio contiene la **metodología LOGAN** (inmutable en su filosofía) + la extensión a **LOGAN OS** (el sistema operativo de agentes) + la **app LOGAN OS** que operacionaliza todo.
+Este repositorio contiene la **metodología LOGAN** (inmutable en su filosofía). La app que operacionaliza la metodología vive en otro repo: **[`github.com/appsmx/logan-app`](https://github.com/appsmx/logan-app)**.
 
 ### Lectura obligatoria al iniciar cualquier sesión (LOGAN §3.2)
 
 1. **[`LOGAN.md`](./LOGAN.md)** — La Constitución. Autoridad metodológica universal. Los 10 artículos.
-2. **[`vision/VISION.md`](./vision/VISION.md)** — La Visión de LOGAN (por encima de la Constitución; responde las 8 preguntas filosóficas).
+2. **[`vision/VISION.md`](./vision/VISION.md)** — La Visión de LOGAN (por encima de la Constitución; responde las 8 preguntas filosóficas + 16 decisiones estratégicas DEC-LOGAN-001 a 016).
 3. **[`docs/SESSION_CONTEXT.md`](./docs/SESSION_CONTEXT.md)** — El estado de la sesión actual (dónde quedamos, qué falta, próximos pasos).
 
-### Estructura del repositorio
+### Estructura del repositorio (metodología)
 
 ```
 LOGAN/
@@ -36,22 +36,27 @@ LOGAN/
 │   ├── core/ROLE.md
 │   ├── memory/ROLE.md
 │   ├── marketing/ROLE.md     ← Primer especialista real, ACTIVO
-│   ├── dev/ROLE.md           ← planificado
-│   ├── design/ROLE.md        ← planificado
-│   ├── analytics/ROLE.md     ← planificado (verifica hipótesis)
-│   ├── finance/ROLE.md       ← planificado
-│   ├── legal/ROLE.md         ← planificado
-│   └── support/ROLE.md       ← planificado
-├── templates/                ← Módulos reutilizables (Catálogo, Pagos, Clientes, etc.)
+│   ├── dev/ROLE.md           ← ACTIVO (v1.0)
+│   ├── design/ROLE.md       ← ACTIVO (v1.0)
+│   ├── analytics/ROLE.md     ← ACTIVO (v1.0)
+│   ├── finance/ROLE.md       ← ACTIVO (v1.0)
+│   ├── legal/ROLE.md         ← ACTIVO (v1.0)
+│   └── support/ROLE.md       ← ACTIVO (v1.0)
+├── templates/                ← Módulos reutilizables
+│   └── asistente-ia/         ← Plantilla WhatsApp bot reutilizable (DEC-LOGAN-011)
 ├── prompts/                  ← Prompts de los especialistas
 ├── examples/                 ← Ejemplos trabajados de mandatos y entregables
 ├── docs/                     ← Documentación humana + SESSION_CONTEXT
-└── app/                      ← La app LOGAN OS (Next.js) que operacionaliza todo lo anterior
+└── changelog/                ← Changelogs por documento
 ```
 
-### Los 15 decisiones estratégicas (DEC-LOGAN-001 a 015)
+### La app LOGAN OS
 
-Ver [`os/LOGAN_OS.md`](./os/LOGAN_OS.md) §13-15 para el registro completo de decisiones estratégicas del ecosistema (hosting, proveedores de IA, dominio, Vercel Pro, tiering pospuesto, módulos en templates/, etc.).
+La aplicación Next.js que operacionaliza LOGAN OS (Core + 9 roles + git tools + showcase + Asistente IA + Scaffolding + Memory con git access) vive en:
+
+**👉 [`github.com/appsmx/logan-app`](https://github.com/appsmx/logan-app)**
+
+Esa app es lo que se deploya en Vercel y eventualmente en `logancorp.mx`.
 
 ---
 
@@ -59,52 +64,41 @@ Ver [`os/LOGAN_OS.md`](./os/LOGAN_OS.md) §13-15 para el registro completo de de
 
 Si estás iniciando una sesión de trabajo (como IA o como humano) bajo LOGAN:
 
-1. **Lee [`LOGAN.md`](./LOGAN.md) completo** antes de producir cualquier resultado. Es la única fuente metodológica.
+1. **Lee [`LOGAN.md`](./LOGAN.md) completo** antes de producir cualquier resultado.
 2. Lee [`vision/VISION.md`](./vision/VISION.md) para entender el porqué filosófico.
 3. Lee [`docs/SESSION_CONTEXT.md`](./docs/SESSION_CONTEXT.md) para saber dónde quedó el proyecto.
 4. Sigue el **Protocolo de Inicialización** (Sección 3 de `LOGAN.md`).
-5. En tu proyecto, mantén los otros dos documentos que LOGAN exige:
-   - `Biblia_<Proyecto>.md` — conocimiento del producto (Nivel Proyecto).
-   - `SESSION_CONTEXT.md` — estado temporal de la sesión (Nivel Temporal).
+5. Si necesitas la app, clona `github.com/appsmx/logan-app`.
 
 > La **Biblia del proyecto** y el **SESSION_CONTEXT** no viven en este repo.
 > Cada proyecto mantiene los suyos en su propio repositorio (ej: `github.com/appsmx/mrtramite`).
 
 ---
 
-## La app LOGAN OS (`/app/`)
+## Los 16 decisiones estratégicas (DEC-LOGAN-001 a 016)
 
-La subcarpeta [`/app/`](./app/) contiene la aplicación Next.js que operacionaliza LOGAN OS:
-
-- **LOGAN Core** funcional (`POST /api/core`): orquestador, validación constitucional, persistencia de decisiones/hipótesis.
-- **LOGAN Marketing** funcional (`POST /api/marketing/execute`): 11 capabilities (analyze_page, create_meta_campaigns, suggest_budget, etc.).
-- **Bucle de hipótesis** (DEC-LOGAN-004): cada decisión de especialista deja hipótesis verificable; Analytics (o el humano) verifica después.
-- **UI**: chat con LOGAN, secciones de Decisiones, Hipótesis, Marketing, Biblia, Auditoría, Ciclo metodológico, PCS.
-- Stack: Next.js 16 + TypeScript + Tailwind 4 + shadcn/ui + Prisma (SQLite local) + Z.ai SDK.
-
-Ver [`app/README.md`](./app/README.md) para cómo correrla localmente.
+Ver [`vision/VISION.md`](./vision/VISION.md) §13-16 para el registro completo de decisiones estratégicas del ecosistema.
 
 ---
 
 ## Estado de las etapas
 
-- ✅ **Etapa 1** (LOGAN OS interno): cerrada. 7 documentos pasan auditoría LOGAN §6.1.
-- ✅ **Etapa 2** (LOGAN Core funcional): cerrada. `POST /api/core` funciona end-to-end.
-- ✅ **Etapa 3** (LOGAN Marketing funcional): cerrada. 11 capabilities activas.
-- ⏳ **Etapa 4** (Mr. Trámite): el producto ya está construido (`github.com/appsmx/mrtramite`); LOGAN se conecta con él para generar hipótesis reales.
-- ⏳ **Etapa 4.5** (LOGAN Dev): pendiente. El rol que genera código production-grade.
+- ✅ **Etapa 1** (LOGAN OS interno): cerrada.
+- ✅ **Etapa 2** (LOGAN Core funcional): cerrada.
+- ✅ **Etapa 3** (LOGAN Marketing funcional): cerrada.
+- ✅ **Etapas 4-4.5**: Mr. Trámite construido + LOGAN Dev/Design/Analytics/Finance/Legal/Support funcionales.
 - ⏳ **Etapa 5** (Hércules Bro): pendiente.
-- ⏳ **Etapa 6** (LOGAN corporativo en `logan.mx`): pendiente.
+- ⏳ **Etapa 6** (LOGAN corporativo en `logancorp.mx`): pendiente — LOGAN OS completo, falta deploy.
 
 ---
 
 ## Cita
 
 ```
-Fuente: https://github.com/appsmx/logan
-Documentos: LOGAN.md (Constitución) + os/*.md (LOGAN OS) + app/ (aplicación)
-Versión: 1.0 (Constitución) + 0.1 (LOGAN OS)
-Estado: Oficial (Constitución) + En construcción (LOGAN OS)
+Fuente: https://github.com/appsmx/logan (metodología) + https://github.com/appsmx/logan-app (app)
+Documentos: LOGAN.md (Constitución) + os/*.md (LOGAN OS)
+Versión: 1.0 (Constitución) + 1.0 (LOGAN OS)
+Estado: Oficial (Constitución) + Completo (LOGAN OS)
 ```
 
 *LOGAN · Learning, Organization, Governance, Architecture & Navigation*
