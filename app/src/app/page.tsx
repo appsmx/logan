@@ -20,6 +20,7 @@ import { MarketingSection } from "@/components/logan/sections/MarketingSection";
 import { DevSection } from "@/components/logan/sections/DevSection";
 import { DesignSection } from "@/components/logan/sections/DesignSection";
 import { AnalyticsSection } from "@/components/logan/sections/AnalyticsSection";
+import { FinanceSection } from "@/components/logan/sections/FinanceSection";
 import { DecisionsSection } from "@/components/logan/sections/DecisionsSection";
 import { DiscoveriesSection } from "@/components/logan/sections/DiscoveriesSection";
 import { AuditSection } from "@/components/logan/sections/AuditSection";
@@ -40,6 +41,7 @@ const SECTIONS: Record<string, React.ComponentType> = {
   dev: DevSection,
   design: DesignSection,
   analytics: AnalyticsSection,
+  finance: FinanceSection,
   decisiones: DecisionsSection,
   descubrimientos: DiscoveriesSection,
   auditoria: AuditSection,
@@ -96,3 +98,4 @@ export default function Home() {
     </QueryProvider>
   );
 }
+
