@@ -37,6 +37,7 @@ model Project {
   marketingAssets MarketingAsset[]
   devAssets       DevAsset[]
   designAssets    DesignAsset[]
+  financeAssets   FinanceAsset[]
 }
 
 // LOGAN OS — the singleton Vision document (above the Constitution).
@@ -214,3 +215,19 @@ model DesignAsset {
   project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
+
+
+// Finance role deliverables — each linked to a Hypothesis (the differentiator).
+// type: financial_projection | cost_analysis | pricing_model | viability_report |
+//       budget_plan | unit_economics | investment_analysis | financial_report
+model FinanceAsset {
+  id           String   @id @default(cuid())
+  projectId    String
+  type         String
+  title        String
+  content      String
+  hypothesisId String?
+  createdAt    DateTime @default(now())
+
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
