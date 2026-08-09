@@ -2,50 +2,44 @@
 
 **Proyecto:** LOGAN OS (desarrollo del ecosistema)
 **Metodología:** LOGAN v1.0
-**Estado:** Etapa 3 cerrada. LOGAN OS tiene dos agentes funcionales (Core + Marketing). App publicada en repo GitHub + sandbox. Etapa 4 conectada con Mr. Trámite real.
-**Avance:** Esta sesión cerró las Etapas 1, 2 y 3, **Y publicó todo en `github.com/appsmx/logan`** (165 archivos: metodología + app funcional). LOGAN se conectó con el producto real Mr. Trámite ( Memory Entry apuntando a github.com/appsmx/mrtramite + mrtramite.vercel.app). Se registraron 15 decisiones estratégicas (DEC-LOGAN-001 a 015).
+**Estado:** Etapa 4.5 cerrada. LOGAN OS tiene cuatro agentes funcionales (Core + Marketing + Dev + Design). App publicada en repo GitHub. Etapa 4 conectada con Mr. Trámite real.
+**Avance:** Esta sesión cerró la Etapa 4.5, activando LOGAN Dev (POST /api/dev/execute, 11 capabilities) y LOGAN Design (POST /api/design/execute, 8 capabilities). Ambos siguen el patrón de Marketing: endpoint + system-prompt + parser defensivo + hipótesis obligatoria. Prisma schema extendido con DevAsset y DesignAsset. LOGAN ahora tiene 5 agentes activos.
 
 ---
 
 ## Objetivo completado en esta sesión
 
-Evolución de LOGAN desde metodología (repositorio externo) hasta LOGAN OS con dos agentes funcionales y la arquitectura completa diseñada, documentada, validada y **publicada en GitHub**.
+Activar LOGAN Dev y LOGAN Design como especialistas funcionales del ecosistema LOGAN OS.
 
 **Construido:**
-- App web LOGAN OS (Next.js 16) con 15 secciones: Visión, Constitución, LOGAN OS, Núcleo (Core), Roles, Memoria, Hablar con LOGAN (chat), Hipótesis, Marketing, Decisiones, Descubrimientos, Auditoría, Biblia, Ciclo metodológico, Sesión (PCS).
-- **LOGAN Core funcional** (`POST /api/core`): lee Constitución + Biblia + Memory Report, responde en voz LOGAN, registra Decisiones/Hipótesis, valida contra Constitución con segundo pase LLM (Art. VII/IX operacionalizados).
-- **LOGAN Marketing funcional** (`POST /api/marketing/execute`): especialista real con 11 capabilities. Cada entregable nace con hipótesis vinculada (DEC-LOGAN-004).
-- Flujo de delegación Core→Marketing de 3 llamadas LLM (Core decide → Marketing ejecuta → Core integra).
-- Validador constitucional recalibrado (no dispara falsos positivos; muestra el texto completo del artículo citado en la UI).
-- **Bug de Art. IX arreglado en persistence layer**: las Decisions que el validador flaggea ahora se persisten como `propuesta` (no `aprobada`), con nota visible. Commit `91cc8eb`.
-- LOGAN conectado con Mr. Trámite real: Project creado en LOGAN con visión real, Memory Entry apuntando a repo + sitio reales, DEC-001 y DEC-002 importadas de Biblia_MrTramite.md.
-- **Repo `github.com/appsmx/logan` actualizado** con: 6 documentos del OS, Visión, 9 role docs, SESSION_CONTEXT, y la app completa en `/app/` (146 archivos). Push exitoso (commit `2fa07bd`).
+- **LOGAN Dev funcional** (`POST /api/dev/execute`): 11 capabilities técnicas. Genera código production-grade, diseña arquitectura, refactoriza, escribe tests, revisa código, debuggea, define schemas Prisma, crea scaffolds, documenta, optimiza performance, revisa seguridad. Cada entregable nace con hipótesis técnica verificable (DEC-LOGAN-004).
+- **LOGAN Design funcional** (`POST /api/design/execute`): 8 capabilities de diseño. Diseña UIs, define sistemas visuales, prototipa flujos, valida usabilidad, genera assets visuales, produce handoffs, audita diseño, genera prompts de imagen. Cada entregable nace con hipótesis de diseño verificable.
+- `app/src/lib/dev/` — types.ts, system-prompt.ts, parse-dev-response.ts
+- `app/src/lib/design/` — types.ts, system-prompt.ts, parse-design-response.ts
+- `roles/dev/ROLE.md` — documento completo del rol Dev v1.0
+- `roles/design/ROLE.md` — actualizado a v1.0 funcional con capabilities
+- `os/ROLES.md` — Dev y Design marcados como activos con endpoint documentado
+- `os/ECOSYSTEM.md` — hito Etapa 4.5 registrado, tabla de agentes actualizada
+- `prisma/schema.prisma` — modelos DevAsset y DesignAsset añadidos
+- `app/src/lib/logan-os-data.ts` — DEV_CAPABILITIES (11), DESIGN_CAPABILITIES (8), ROLES status actualizado
 
-**Diseñado (sin código):**
-- Arquitectura LOGAN OS completa (3 tipos de agente, protocolo de comunicación, bucle de aprendizaje, hoja de ruta de 6 etapas, estrategia de dominios, estrategia de hosting).
-- 6 documentos del OS (LOGAN_OS, COMMUNICATION, DELEGATION, MEMORY, STANDARDS, ECOSYSTEM, ROLES) + VISION — todos publicados en el repo.
+**Patrón de los especialistas (consistente en los 3 roles activos):**
+```
+POST /api/{role}/execute
+  → buildSystemPrompt(biblia, capability, brief)
+  → ZAI.chat.completions (Claude Sonnet)
+  → parseResponse (defensivo, nunca lanza)
+  → db.hypothesis.create (roleId="{role}", status="pendiente")
+  → db.{role}Asset.create (linked to hypothesis)
+  → return { title, content, hypothesis, assetId, hypothesisId }
+```
 
 ---
 
 ## Decisiones tomadas
 
-15 decisiones estratégicas registradas en `vision/VISION.md` (DEC-LOGAN-001 a 015). Las más relevantes para retomar:
-
-| ID | Decisión | Fecha |
-|---|---|---|
-| DEC-LOGAN-001 | Marca corporativa al final (después de productos exitosos) | 2026-07-29 |
-| DEC-LOGAN-004 | El bucle de hipótesis es el diferenciador estratégico | 2026-07-29 |
-| DEC-LOGAN-005 | ~~ilimitadohost~~ CORREGIDA por DEC-LOGAN-012 y DEC-LOGAN-015 | 2026-07-29 |
-| DEC-LOGAN-006 | Claude Sonnet (Core) + Gemini 1.5 Pro (Memory) vía tiers gratuitos | 2026-07-29 |
-| DEC-LOGAN-007 | Presupuesto primera campaña Meta: $60-100 USD | 2026-07-29 |
-| DEC-LOGAN-008 | App es parcialmente producción (chat = vista real de Core; resto prototipo) | 2026-07-29 |
-| DEC-LOGAN-009 | Sistema para Productores Musicales = 3er producto, no un tier | 2026-07-29 |
-| DEC-LOGAN-010 | Posponer tiering de LOGAN OS; si existen, aplican a productos no al OS | 2026-07-29 |
-| DEC-LOGAN-011 | Módulos reutilizables (Catálogo, Pagos, etc.) viven en `templates/` | 2026-07-29 |
-| DEC-LOGAN-012 | CORRECCIÓN: hosting-mexico.net reemplaza ilimitadohost (no soporta .mx) | 2026-08-01 |
-| DEC-LOGAN-013 | Vercel Pro $20/mes para producción LOGAN (timeout 60s necesario) | 2026-08-01 |
-| DEC-LOGAN-014 | `github.com/appsmx/logan` PÚBLICO; productos PRIVADOS | 2026-08-01 |
-| DEC-LOGAN-015 | Neubox como proveedor final (~$11 USD primer año, migración año 2) | 2026-08-02 |
+15 decisiones estratégicas previas siguen vigentes (DEC-LOGAN-001 a 015).
+No se tomaron nuevas decisiones estratégicas en esta sesión.
 
 ---
 
@@ -53,74 +47,66 @@ Evolución de LOGAN desde metodología (repositorio externo) hasta LOGAN OS con 
 
 | Documento | Dónde | Qué cambió |
 |---|---|---|
-| `LOGAN.md` | Raíz del repo | Constitución v1.0 (intacto, inmutable) |
-| `vision/VISION.md` | Repo | Visión de LOGAN + 15 decisiones estratégicas DEC-LOGAN-001 a 015 |
-| `os/LOGAN_OS.md` | Repo | Diseño completo del OS (§1-15) |
-| `os/COMMUNICATION.md` | Repo | Cómo se hablan los agentes (mandato, entregable, reporte) |
-| `os/DELEGATION.md` | Repo | Cómo Core reparte el trabajo |
-| `os/MEMORY.md` | Repo | Cómo Memory prepara el contexto |
-| `os/STANDARDS.md` | Repo | Convenciones comunes |
-| `os/ECOSYSTEM.md` | Repo | Memoria institucional del ecosistema |
-| `os/ROLES.md` | Repo | Registro de los 9 roles |
-| `roles/*/ROLE.md` | Repo | 9 documentos individuales por rol (core, memory, marketing activos; dev, design, analytics, finance, legal, support planificados) |
+| `roles/dev/ROLE.md` | Repo | v0.1 (planificado) → v1.0 (activo), capabilities completas |
+| `roles/design/ROLE.md` | Repo | v0.1 (activo definición) → v1.0 (activo funcional), capabilities completas |
+| `os/ROLES.md` | Repo | Dev y Design marcados activos, endpoints documentados |
+| `os/ECOSYSTEM.md` | Repo | Hito Etapa 4.5 añadido, tabla agentes actualizada |
+| `app/src/lib/dev/` | Repo | Directorio nuevo: types.ts, system-prompt.ts, parse-dev-response.ts |
+| `app/src/lib/design/` | Repo | Directorio nuevo: types.ts, system-prompt.ts, parse-design-response.ts |
+| `app/src/app/api/dev/execute/route.ts` | Repo | Endpoint nuevo — LOGAN Dev funcional |
+| `app/src/app/api/design/execute/route.ts` | Repo | Endpoint nuevo — LOGAN Design funcional |
+| `app/src/lib/logan-os-data.ts` | Repo | DEV_CAPABILITIES, DESIGN_CAPABILITIES, ROLES status |
+| `app/prisma/schema.prisma` | Repo | Modelos DevAsset y DesignAsset añadidos |
 | `docs/SESSION_CONTEXT.md` | Repo | Este documento |
-| `app/` | Repo subcarpeta | App LOGAN OS completa (146 archivos) |
-| `README.md` | Raíz del repo | Actualizado con estructura + cómo iniciar sesión + estado de etapas |
 
 ---
 
 ## Pendientes
 
-1. **Etapa 4.5: LOGAN Dev funcional** — el rol que genera código production-grade. Siguiente paso real del roadmap. Sin Dev, LOGAN no puede construir software solo (sigue necesitando puente como yo).
-2. **Módulo Asistente IA** (`templates/asistente-ia`) — la plantilla reutilizable para bots WhatsApp que cualquier producto LOGAN puede instanciar. Mr. Trámite lo necesitará cuando active WhatsApp Cloud API (después de 5 clientes).
-3. **Herramientas git para LOGAN** — diseño pendiente (scopes por repo, branches protegidos, PRs automáticos, validación constitucional extra antes de commits). Necesario antes de dar a LOGAN capacidad de modificar repos.
-4. **Formalizar el roadmap de roles** — documento claro de qué se construye en cada etapa hasta Etapa 6 (LOGAN corporativo en logan.mx).
-5. **Migrar SQLite a Postgres** para deploy en Vercel (cuando se publique en logan.mx). Cambio de una línea en `prisma/schema.prisma`.
-6. **Optimizar latencia** del flujo 3-LLM (30-50s por turno delegado). Posible: paralelizar llamadas, cachear system prompts.
-7. **Construir roles faltantes** para Etapa 6: Design, Analytics, Finance, Legal, Support. Cada uno es una etapa de trabajo real.
-8. **Verificar en el Preview Panel** que LOGAN responde con contexto real de Mr. Trámite (la prueba con curl dió timeout del gateway, pero la conexión está hecha en la BD).
+1. **Migrar SQLite → Postgres** para deploy en Vercel Pro (DEC-LOGAN-013). Cambio de una línea en `prisma/schema.prisma` + variable de entorno `DATABASE_URL`.
+2. **Conectar Dev y Design al flujo de delegación de Core** — agregar `dev_execute` y `design_execute` como action types en `app/src/lib/core/types.ts`, igual que `marketing_execute` en Etapa 3.
+3. **UI para Dev y Design** — secciones en la app (sidebar + vistas) similares a la sección Marketing.
+4. **Analytics funcional** — el rol que verifica hipótesis. Necesario para cerrar el bucle de aprendizaje de Dev, Design y Marketing.
+5. **Módulo Asistente IA** (`templates/asistente-ia`) — plantilla reutilizable para bots WhatsApp.
+6. **Optimizar latencia** del flujo 3-LLM (30-50s). Paralelizar llamadas, cachear system prompts.
+7. **Hércules Bro** — Etapa 5.
+8. **LOGAN corporativo en logan.mx** — Etapa 6.
 
 ---
 
 ## Riesgos identificados
 
-- **Latencia 30-50s en turnos delegados a Marketing** (3 llamadas LLM secuenciales). Mitigación futura: paralelización o caché.
-- **Tier gratuito de Z.ai tiene rate limits y saturación ocasional.** Mitigación: migrar a API pagada cuando haya ingresos (DEC-LOGAN-006).
-- **LOGAN no tiene herramientas git hoy.** No puede modificar repos de productos. Requiere diseño cuidadoso de seguridad antes de implementarse.
-- **Faltan 6 roles para LOGAN completo** (Dev, Design, Analytics, Finance, Legal, Support). Etapa 6 (LOGAN corporativo tomando clientes externos) está a ~4-5 etapas de construcción.
-- **Costo real de LOGAN en producción** (~$200-400/mes mixto, ~$1,500/mes Sonnet para todo). Requiere ingresos de Mr. Trámite para sostenerse.
-- **El chat de la app NO persiste** (by design Art. IV). El texto del chat se pierde al actualizar; lo que persiste son Decisiones, Hipótesis, SessionContexts.
-- **Token de GitHub compartido en esta sesión** — el usuario debe revocarlo en https://github.com/settings/tokens por seguridad.
+- **Dev y Design no están conectados al flujo de delegación de Core todavía.** Core puede llamarlos directamente vía fetch interno, pero no hay action type `dev_execute` / `design_execute` en core/types.ts. Requiere una sesión de integración.
+- **Prisma schema actualizado pero sin migración ejecutada.** Las tablas DevAsset y DesignAsset no existen en la BD hasta correr `prisma migrate dev`.
+- **Latencia 30-50s en turnos delegados** (3 llamadas LLM secuenciales). Mitigación futura: paralelización.
+- **Tier gratuito de Z.ai tiene rate limits.** Mitigación: migrar a API pagada cuando haya ingresos.
+- **Faltan 4 roles para LOGAN completo** (Analytics, Finance, Legal, Support).
 
 ---
 
 ## Próximo objetivo
 
-El usuario debe elegir el siguiente paso. Opciones presentadas:
+El usuario debe elegir el siguiente paso. Opciones:
 
-- **Opción A (recomendada): Etapa 4.5 — LOGAN Dev funcional.** El rol que genera código. Primer paso real hacia LOGAN autosuficiente. Sin Dev, LOGAN no puede construir software solo.
-- **Opción B: Módulo Asistente IA.** Plantilla reutilizable para bots WhatsApp. Mr. Trámite lo necesitará después de 5 clientes.
-- **Opción C: Formalizar el roadmap de roles.** Documento claro de qué se construye en cada etapa hasta Etapa 6.
-- **Opción D: Optimizar latencia del flujo 3-LLM.** Bajar de 30-50s a ~12-18s. Podría caber en Vercel Hobby.
+- **Opción A (recomendada): Conectar Dev + Design al flujo de Core** — agregar `dev_execute` y `design_execute` como action types, para que Core pueda delegar trabajo técnico y de diseño igual que delega a Marketing.
+- **Opción B: UI para Dev y Design** — secciones en la app con sus capabilities y entregables.
+- **Opción C: Analytics funcional** — el rol que verifica hipótesis y cierra el bucle de aprendizaje.
+- **Opción D: Migrar SQLite → Postgres** y hacer deploy en Vercel Pro.
 
-Recomendación del arquitecto: **A primero** (LOGAN Dev). Es el siguiente paso natural del roadmap y desbloquea la capacidad de LOGAN para construir software sin puente humano.
+Recomendación: **A primero** (conectar Dev+Design a Core). Sin eso, los endpoints existen pero Core no los usa automáticamente.
 
 ---
 
 ## Observaciones
 
-- **El repo `github.com/appsmx/logan` está completo y actualizado.** Cualquier agente que inicie un chat nuevo y lea este repo puede retomar LOGAN exactamente donde lo dejamos.
-- **El flujo de trabajo del usuario:** cuando inicia un chat nuevo, le pasa al agente (a) el repo de LOGAN + (b) el repo del proyecto específico. El agente lee ambos y trabaja con la metodología aplicada a ese proyecto.
-- **Mr. Trámite ya está construido** (`github.com/appsmx/mrtramite` + `mrtramite.vercel.app`). LOGAN se conectó con él (Memory Entry + DEC-001/002 importadas). No hay nada que construir de Mr. Trámite — LOGAN solo ayuda a crecerlo.
-- **15 decisiones estratégicas** registradas (DEC-LOGAN-001 a 015). Hosting: Neubox. Vercel: Pro $20/mes. Repo: público. Modelo: Claude Sonnet vía Z.ai free tier.
-- **Costo realista de LOGAN en producción** con 5 clientes/día usando Mr. Trámite: ~$21 USD/mes (Vercel Pro + Z.ai free + WhatsApp Cloud API free).
-- **El usuario validó** que LOGAN responde bien en el chat (con contexto real de Mr. Trámite). Bug de Art. IX arreglado.
-- **zcode.z.ai no es alternativa a LOGAN** — es otra herramienta para escribir código. LOGAN es el framework; zcode/yo somos el compilador. Cambiar de agente no acelera LOGAN (lo limitan las decisiones, no la velocidad de código).
-- **LOGAN OS está publicado en `github.com/appsmx/logan`** (commit `2fa07bd`). 165 archivos. Respaldo completo.
+- **LOGAN OS tiene ahora 5 agentes activos:** Core, Memory, Marketing, Dev, Design.
+- **El patrón de especialistas está consolidado.** Agregar un nuevo rol (Analytics, Finance, etc.) es mecánico: crear `lib/{role}/`, `api/{role}/execute/route.ts`, añadir capabilities a `logan-os-data.ts`, actualizar ROLES.md y ECOSYSTEM.md.
+- **Dev y Design siguen exactamente el mismo patrón que Marketing** (Art. III — simplicidad, reutilización del patrón). El bucle de hipótesis se preserva en todos los casos.
+- **El repo `github.com/appsmx/logan` está actualizado** con todos los archivos de esta sesión.
 
 ---
 
 *Generado por: PCS (Protocolo de Continuidad de Sesión, LOGAN §10)*
-*Fecha: 2026-08-02*
+*Fecha: 2026-08-08*
 *Próxima sesión: leer `LOGAN.md` + `vision/VISION.md` + este `docs/SESSION_CONTEXT.md` antes de producir cualquier resultado (LOGAN §3.2).*
-*Sesión cerrada con comando "cierra Y LUEGO Continuamos".*
+*Sesión cerrada con Etapa 4.5 completa — Dev + Design funcionales.*
