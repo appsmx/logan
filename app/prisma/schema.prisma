@@ -1,6 +1,6 @@
 // LOGAN OS — Prisma schema
 // LOGAN evolved from a methodology into a multi-role AI operating system.
-// Core (orchestrator), Memory (context), specialist roles (Marketing, Dev, ...).
+// Core (orchestrator), Memory (context), specialist roles (Marketing, Dev, Design, ...).
 // The differentiator: every specialist decision is recorded as a HIPÓTESIS that
 // Analytics later verifies (verificada / refutada) — the learning loop.
 
@@ -35,6 +35,8 @@ model Project {
   hypotheses      Hypothesis[]
   memoryEntries   MemoryEntry[]
   marketingAssets MarketingAsset[]
+  devAssets       DevAsset[]
+  designAssets    DesignAsset[]
 }
 
 // LOGAN OS — the singleton Vision document (above the Constitution).
@@ -137,7 +139,7 @@ model Discovery {
 }
 
 // THE DIFFERENTIATOR — every specialist decision is a hypothesis that can be verified.
-// roleId = which role proposed it (e.g. "marketing", "dev", "core").
+// roleId = which role proposed it (e.g. "marketing", "dev", "design", "core").
 // status: pendiente | en_observacion | verificada | refutada
 model Hypothesis {
   id         String   @id @default(cuid())
@@ -175,6 +177,37 @@ model MarketingAsset {
   type         String
   title        String
   content      String   // markdown / structured content
+  hypothesisId String?  // optional link to the Hypothesis it tests
+  createdAt    DateTime @default(now())
+
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// Dev role deliverables — each linked to a Hypothesis (the differentiator).
+// type: architecture_doc | code_implementation | code_refactor | test_suite |
+//       code_review | bug_fix | db_schema | project_scaffold | technical_doc |
+//       performance_report | security_report
+model DevAsset {
+  id           String   @id @default(cuid())
+  projectId    String
+  type         String
+  title        String
+  content      String   // markdown / code content
+  hypothesisId String?  // optional link to the Hypothesis it tests
+  createdAt    DateTime @default(now())
+
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// Design role deliverables — each linked to a Hypothesis (the differentiator).
+// type: ui_spec | design_system | interaction_flow | visual_asset |
+//       usability_review | design_handoff | design_audit | image_asset_prompt
+model DesignAsset {
+  id           String   @id @default(cuid())
+  projectId    String
+  type         String
+  title        String
+  content      String   // markdown / specification content
   hypothesisId String?  // optional link to the Hypothesis it tests
   createdAt    DateTime @default(now())
 
