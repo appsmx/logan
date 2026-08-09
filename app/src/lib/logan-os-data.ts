@@ -817,3 +817,38 @@ export const SUPPORT_ASSET_TYPES: Record<string, { label: string; color: string 
   improvement_proposal:  { label: "Propuesta de mejora",        color: "success"     },
   onboarding_guide:      { label: "Guía de onboarding",          color: "primary"     },
 };
+
+// ============================================================
+// ASSISTANT CAPABILITIES — Módulo Asistente IA (DEC-LOGAN-011)
+// ============================================================
+// Different from the specialist capabilities above: the Assistant IA is a
+// customer-facing bot (NOT an internal agent). It does NOT persist assets —
+// each capability produces a conversational text response only. The
+// `producesAssetType` field is kept for type-shape consistency with other
+// capability tables, but always = "conversational_response" (a marker, not a
+// real asset type — there is no AssistantAsset table).
+//
+// See: templates/asistente-ia/SPECIFICATION.md (Task 27, DEC-LOGAN-011).
+export type AssistantCapability = {
+  key: string;
+  label: string;
+  description: string;
+  producesAssetType: string; // always "conversational_response" — kept for shape consistency
+};
+
+export const ASSISTANT_CAPABILITIES: AssistantCapability[] = [
+  { key: "answer_faq",         label: "Responder FAQ",          description: "Responder una pregunta frecuente sobre el producto con base en su Biblia.",            producesAssetType: "conversational_response" },
+  { key: "product_info",      label: "Información de producto", description: "Proporcionar información sobre un producto o servicio específico del catálogo.",       producesAssetType: "conversational_response" },
+  { key: "pricing_info",      label: "Información de precios",  description: "Proporcionar precios, descuentos y formas de pago.",                                  producesAssetType: "conversational_response" },
+  { key: "quote_assistance",  label: "Asistencia de cotización", description: "Ayudar al cliente a iniciar una cotización o solicitud recopilando datos clave.",    producesAssetType: "conversational_response" },
+  { key: "process_guidance",  label: "Guía de proceso",         description: "Guiar al cliente por un proceso (ej. subir documentos, agendar cita).",               producesAssetType: "conversational_response" },
+  { key: "escalate_to_human", label: "Escalar a humano",        description: "Escalar al dueño del producto (WhatsApp/email) cuando el bot no puede ayudar.",        producesAssetType: "conversational_response" },
+  { key: "general_assistance", label: "Asistencia general",     description: "Respuesta conversacional general útil cuando no encaja una capability específica.",     producesAssetType: "conversational_response" },
+];
+
+// Marker "asset type" for the Assistant. There is no AssistantAsset table; the
+// assistant doesn't persist anything. This map exists only so that any UI that
+// iterates over *_ASSET_TYPES for a generic display has a label to show.
+export const ASSISTANT_RESPONSE_TYPES: Record<string, { label: string; color: string }> = {
+  conversational_response: { label: "Respuesta conversacional", color: "muted" },
+};
