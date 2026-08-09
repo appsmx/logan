@@ -118,6 +118,20 @@ export type CoreAction =
       // git_get_status — read repo state (branches, open PRs, last commit). Read-only.
       type: "git_get_status";
       repo: string;
+    }
+  // ─── LOGAN scaffold tool (Task 28) ─────────────────────────────────────────
+  | {
+      // scaffold_project — create a new LOGAN product project end-to-end
+      // (repo + structure + Biblia + LOGAN connection). Calls POST /api/scaffold
+      // internally. Use this when the user asks to create a new product
+      // ("crea un nuevo proyecto para X" / "inicia un producto nuevo").
+      type: "scaffold_project";
+      productName: string;
+      productSlug: string; // lowercase, hyphens, 3-40 chars
+      vision: string;
+      users: string[];
+      repoMode: "create" | "existing"; // create new repo OR use existing
+      repoName?: string; // required if repoMode="existing"
     };
 
 /** Constitutional self-check that Core includes in its response. */
@@ -219,6 +233,20 @@ export type ActionTaken =
       openPRs?: { number: number; title: string; head: string }[];
       gitActionId: string;
       status: string;
+    }
+  // ─── LOGAN scaffold tool — ActionTaken variant (Task 28) ──────────────────
+  | {
+      type: "scaffold_project";
+      productName: string;
+      productSlug: string;
+      repo: string;       // repo name actually used (under appsmx/)
+      repoUrl?: string;   // HTML URL of the repo on GitHub
+      repoMode: "create" | "existing";
+      projectId?: string; // new LOGAN Project ID (only if scaffold succeeded)
+      memoryEntryId?: string;
+      files?: { path: string; commitSha: string; created: boolean }[];
+      status: string;    // "creado" | "fallido"
+      error?: string;    // present if status="fallido"
     };
 
 /** The full payload returned by the POST /api/core endpoint. */

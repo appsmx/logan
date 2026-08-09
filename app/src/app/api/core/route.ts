@@ -38,6 +38,7 @@ import {
   executeFinanceDelegations,
   executeLegalDelegations,
   executeSupportDelegations,
+  executeScaffoldDelegations,
 } from "@/lib/core/execute-actions";
 import { executeGitActions } from "@/lib/git/execute-git-actions";
 import type {
@@ -79,6 +80,15 @@ function buildDocumentsUpdated(actionsTaken: ActionTaken[]): { doc: string; chan
     if (a.type === "git_write_file") return [{ doc: "GitAction", change: `Archivo ${a.path} en ${a.branch}@${a.repo} — ${a.status}` }];
     if (a.type === "git_create_pr") return a.prUrl ? [{ doc: "GitAction", change: `PR #${a.prNumber} en ${a.repo} — ${a.status} (${a.prUrl})` }] : [{ doc: "GitAction", change: `PR en ${a.repo} — ${a.status} (fallido)` }];
     if (a.type === "git_get_status") return [{ doc: "GitAction", change: `Status ${a.repo} — ${a.status}` }];
+    if (a.type === "scaffold_project") {
+      if (a.status === "creado") {
+        return [
+          { doc: "Project", change: `Nuevo proyecto "${a.productName}" (slug: ${a.productSlug}) — repo: ${a.repo}` },
+          ...(a.files || []).map((f) => ({ doc: "ScaffoldFile", change: `${f.path} en ${a.repo}` })),
+        ];
+      }
+      return [{ doc: "Scaffold", change: `Falló scaffold de "${a.productName}" — ${a.error || "error desconocido"}` }];
+    }
     return [];
   });
 }
@@ -171,9 +181,10 @@ export async function POST(req: NextRequest) {
   let legalActionsTaken: ActionTaken[] = [], legalDeliverables: LegalDeliverable[] = [];
   let supportActionsTaken: ActionTaken[] = [], supportDeliverables: SupportDeliverable[] = [];
   let gitActionsTaken: ActionTaken[] = [];
+  let scaffoldActionsTaken: ActionTaken[] = [];
 
   try {
-    const [mkt, dev, des, ana, fin, leg, sup, git] = await Promise.all([
+    const [mkt, dev, des, ana, fin, leg, sup, git, sca] = await Promise.all([
       executeMarketingDelegations(projectId, parsed.actions),
       executeDevDelegations(projectId, parsed.actions),
       executeDesignDelegations(projectId, parsed.actions),
@@ -182,6 +193,7 @@ export async function POST(req: NextRequest) {
       executeLegalDelegations(projectId, parsed.actions),
       executeSupportDelegations(projectId, parsed.actions),
       executeGitActions(projectId, parsed.actions),
+      executeScaffoldDelegations(parsed.actions),
     ]);
     marketingActionsTaken = mkt.actionsTaken; marketingDeliverables = mkt.deliverables;
     devActionsTaken = dev.actionsTaken; devDeliverables = dev.deliverables;
@@ -191,9 +203,10 @@ export async function POST(req: NextRequest) {
     legalActionsTaken = leg.actionsTaken; legalDeliverables = leg.deliverables;
     supportActionsTaken = sup.actionsTaken; supportDeliverables = sup.deliverables;
     gitActionsTaken = git;
+    scaffoldActionsTaken = sca;
   } catch (e) { console.error("[core] Delegations:", (e as Error).message); }
 
-  const actionsTaken: ActionTaken[] = [...nonSpecialistActions, ...marketingActionsTaken, ...devActionsTaken, ...designActionsTaken, ...analyticsActionsTaken, ...financeActionsTaken, ...legalActionsTaken, ...supportActionsTaken, ...gitActionsTaken];
+  const actionsTaken: ActionTaken[] = [...nonSpecialistActions, ...marketingActionsTaken, ...devActionsTaken, ...designActionsTaken, ...analyticsActionsTaken, ...financeActionsTaken, ...legalActionsTaken, ...supportActionsTaken, ...gitActionsTaken, ...scaffoldActionsTaken];
 
   const allDeliverables = [...marketingDeliverables, ...devDeliverables, ...designDeliverables, ...analyticsDeliverables, ...financeDeliverables, ...legalDeliverables, ...supportDeliverables];
   let finalResponse = parsed.response;

@@ -172,7 +172,7 @@ async function executeOne(
 export async function executeActions(projectId: string, actions: CoreAction[], constitutional?: ConstitutionalCheck | null): Promise<ActionTaken[]> {
   const results: ActionTaken[] = [];
   for (const action of actions) {
-    if (["marketing_execute","dev_execute","design_execute","analytics_verify","analytics_patterns","finance_execute","legal_execute","support_execute","git_create_branch","git_write_file","git_create_pr","git_get_status"].includes(action.type)) continue;
+    if (["marketing_execute","dev_execute","design_execute","analytics_verify","analytics_patterns","finance_execute","legal_execute","support_execute","git_create_branch","git_write_file","git_create_pr","git_get_status","scaffold_project"].includes(action.type)) continue;
     const r = await executeOne(projectId, action, constitutional);
     if (r) results.push(r);
   }
@@ -277,4 +277,79 @@ export async function executeSupportDelegations(projectId: string, actions: Core
     deliverables.push({ capability: action.capability, capabilityLabel: supportCapabilityLabel(action.capability), title: result.title, content: result.content, hypothesisId: result.hypothesisId, supportAssetId: result.supportAssetId, hypothesis: result.hypothesis });
   }
   return { actionsTaken, deliverables };
+}
+
+// ─── scaffold_project delegation (Task 28) ──────────────────────────────────
+//
+// When Core proposes a `scaffold_project` action, the backend calls POST
+// /api/scaffold internally (server-to-server fetch, just like Core calls
+// Marketing/Dev/etc.). The projectId passed in is the project the user is
+// CURRENTLY in (where the scaffold was requested from) — but the scaffold
+// endpoint creates a NEW project. The original projectId is unused but kept
+// for signature consistency with other delegation functions.
+
+async function callScaffoldEndpoint(action: Extract<CoreAction, { type: "scaffold_project" }>) {
+  try {
+    const res = await fetch("http://localhost:3000/api/scaffold", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        productName: action.productName,
+        productSlug: action.productSlug,
+        vision: action.vision,
+        users: action.users,
+        repoMode: action.repoMode,
+        ...(action.repoName ? { repoName: action.repoName } : {}),
+      }),
+    });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      return { ok: false as const, status: res.status, error: (e as { error?: string }).error || `HTTP ${res.status}`, hint: (e as { hint?: string }).hint };
+    }
+    const d = await res.json() as {
+      projectId: string;
+      repo: string;
+      repoUrl: string;
+      repoMode: "create" | "existing";
+      files: { path: string; commitSha: string; created: boolean }[];
+      memoryEntryId: string;
+      message: string;
+    };
+    return { ok: true as const, data: d };
+  } catch (e) {
+    return { ok: false as const, status: 0, error: (e as Error).message || String(e) };
+  }
+}
+
+export async function executeScaffoldDelegations(actions: CoreAction[]): Promise<ActionTaken[]> {
+  const actionsTaken: ActionTaken[] = [];
+  const filtered = actions.filter((a): a is Extract<CoreAction, { type: "scaffold_project" }> => a.type === "scaffold_project");
+  const results = await Promise.all(filtered.map(async (a) => ({ action: a, result: await callScaffoldEndpoint(a) })));
+  for (const { action, result } of results) {
+    if (!result.ok) {
+      actionsTaken.push({
+        type: "scaffold_project",
+        productName: action.productName,
+        productSlug: action.productSlug,
+        repo: action.repoMode === "existing" ? (action.repoName || "") : action.productSlug,
+        repoMode: action.repoMode,
+        status: "fallido",
+        error: result.error,
+      });
+      continue;
+    }
+    actionsTaken.push({
+      type: "scaffold_project",
+      productName: action.productName,
+      productSlug: action.productSlug,
+      repo: result.data.repo,
+      repoUrl: result.data.repoUrl,
+      repoMode: result.data.repoMode,
+      projectId: result.data.projectId,
+      memoryEntryId: result.data.memoryEntryId,
+      files: result.data.files,
+      status: "creado",
+    });
+  }
+  return actionsTaken;
 }

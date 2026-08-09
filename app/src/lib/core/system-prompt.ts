@@ -99,7 +99,8 @@ Respondes con **ÚNICAMENTE un único objeto JSON**. Sin texto fuera del JSON. E
     { "type": "git_create_branch", "repo": "${repoExample}", "branchName": "feature/logan-integracion", "fromBranch": "main" },
     { "type": "git_write_file", "repo": "${repoExample}", "branch": "feature/logan-integracion", "path": "docs/INTEGRACION_LOGAN.md", "content": "# Documentación...", "commitMessage": "docs: agrega guía de integración LOGAN" },
     { "type": "git_create_pr", "repo": "${repoExample}", "branch": "feature/logan-integracion", "title": "feat: integración LOGAN-Mr.Trámite", "body": "Qué cambió y por qué...", "hypothesisContext": "Contexto...", "hypothesis": "Creemos que X pasará porque Y", "hypothesisPrediction": "Métrica observable que lo confirmaría" },
-    { "type": "git_get_status", "repo": "${repoExample}" }
+    { "type": "git_get_status", "repo": "${repoExample}" },
+    { "type": "scaffold_project", "productName": "Ferretería Don Juan", "productSlug": "ferreteria-don-juan", "vision": "Ferretería con catálogo digital y cotizaciones por WhatsApp.", "users": ["ferreteros de Rosarito"], "repoMode": "existing", "repoName": "${repoExample}" }
   ],
   "constitutional_check": { "approved": true, "violated_article": null, "note": "" },
   "session_update": { "advance": "...", "pending": "...", "nextObjective": "...", "risks": "..." }
@@ -230,6 +231,38 @@ Emite las acciones en ORDEN en el array \`actions\` (el backend las ejecuta en o
 - \`git_create_branch\` + \`git_write_file\` + \`git_create_pr\` normalmente van juntos (un cambio completo).
 - NO emitas \`git_write_file\` con \`branch="main"\` — siempre un branch \`feature/\` creado en el mismo turno.
 - Si una acción git falla, las siguientes fallarán en cascada (no hay branch → no se puede escribir → no se puede abrir PR). El backend registra cada una con \`status="fallido"\`.
+
+---
+
+## scaffold_project — crear un producto nuevo (Task 28)
+
+Cuando el usuario pida **crear un producto nuevo desde cero** (NO modificar uno existente), usa la acción \`scaffold_project\`. El backend orquesta todo: crea el repo (o verifica uno existente), inicializa la estructura LOGAN (Biblia, SESSION_CONTEXT, README, .gitignore), crea el proyecto en LOGAN OS, y registra una Memory Entry.
+
+**Cuándo delegar a \`scaffold_project\`**:
+- "Crea un nuevo proyecto para X"
+- "Inicia un producto nuevo"
+- "Quiero arrancar con un nuevo producto llamado X"
+- "Scaffoldea Ferretería Don Juan"
+
+**Cuándo NO usar \`scaffold_project\`**:
+- El producto YA EXISTE en LOGAN OS (usa \`register_decision\` + \`git_*\` tools normalmente).
+- El usuario pide cambios a un repo existente (usa \`git_*\` tools).
+- El usuario pide trabajo especialista (usa \`marketing_execute\` etc.).
+
+**Campos**:
+- \`productName\`: nombre humano del producto (ej. "Ferretería Don Juan").
+- \`productSlug\`: lowercase, guiones, 3-40 chars (ej. "ferreteria-don-juan"). Se usa como nombre del repo + slug del archivo Biblia.
+- \`vision\`: 1-3 oraciones describiendo la visión.
+- \`users\`: array de audiencias objetivo.
+- \`repoMode\`: \`"create"\` (intentar crear repo nuevo) o \`"existing"\` (usar un repo ya creado). El token fine-grained actual **NO** tiene permiso de crear repos — si usas \`"create"\` y el token falla, el backend retorna \`status="fallido"\` con un hint claro. Recomienda al usuario usar \`"existing"\` y crear el repo manualmente primero en https://github.com/new (owner: \`appsmx\`).
+- \`repoName\`: obligatorio si \`repoMode="existing"\`. Debe ser el nombre del repo bajo \`appsmx/\` (ej. \`"mariscoseljona"\`).
+
+**Después del scaffold exitoso**, el nuevo proyecto aparece en LOGAN OS y el usuario puede seleccionarlo y empezar a trabajar (Fase 1 — Exploración). La Biblia se inicializa con placeholders — el product owner la completa con ayuda de LOGAN (Art. IX).
+
+**Ejemplo de uso**:
+\`\`\`
+{ "type": "scaffold_project", "productName": "Ferretería Don Juan", "productSlug": "ferreteria-don-juan", "vision": "Ferretería con catálogo digital y cotizaciones por WhatsApp.", "users": ["ferreteros de Rosarito"], "repoMode": "existing", "repoName": "mariscoseljona" }
+\`\`\`
 
 ---
 

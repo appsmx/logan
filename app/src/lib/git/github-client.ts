@@ -10,6 +10,14 @@
 //
 // CRITICAL: `logan` repo is HARDCODED as never allowed, regardless of env
 // config. LOGAN cannot modify its own methodology (Art. IX + Art. I).
+//
+// Task 28: `isRepoAllowed()` ALSO checks an in-memory supplement populated by
+// the scaffold endpoint (`addAllowedRepo()`). This lets newly scaffolded
+// repos work without a server restart. The supplement lives in
+// `src/lib/scaffold/allowed-repos.ts` (no circular import — that module
+// imports nothing from this one).
+
+import { addAllowedRepo as addExtraAllowedRepo, isExtraAllowedRepo, listExtraAllowedRepos as listExtraRepos } from "@/lib/scaffold/allowed-repos";
 
 const GITHUB_API = "https://api.github.com";
 
@@ -21,7 +29,33 @@ export function getOwner(): string {
   return process.env.LOGAN_GITHUB_OWNER || "appsmx";
 }
 
-/** True if the repo is in LOGAN_ALLOWED_REPOS (and not the forbidden "logan" repo). */
+/**
+ * Adds a repo to the in-memory allowed-repos supplement. Idempotent. Lowercased.
+ * The `logan` repo is always rejected. Called by the scaffold endpoint on
+ * success. The supplement is checked by `isRepoAllowed()` below.
+ *
+ * For production: also add the repo to `.env` LOGAN_ALLOWED_REPOS so the
+ * supplement persists across serverless cold-starts.
+ */
+export function addAllowedRepo(repo: string): void {
+  const r = (repo || "").trim().toLowerCase();
+  if (!r) return;
+  if (FORBIDDEN_REPOS.has(r)) return;
+  addExtraAllowedRepo(r);
+}
+
+/**
+ * Returns the list of repos added at runtime via `addAllowedRepo()` (original
+ * case as given). For inspection / debugging.
+ */
+export function listExtraAllowedRepos(): string[] {
+  return listExtraRepos();
+}
+
+/**
+ * True if the repo is in LOGAN_ALLOWED_REPOS OR was added at runtime via
+ * `addAllowedRepo()` (and is not the forbidden "logan" repo).
+ */
 export function isRepoAllowed(repo: string): boolean {
   const r = (repo || "").trim().toLowerCase();
   if (!r) return false;
@@ -30,7 +64,9 @@ export function isRepoAllowed(repo: string): boolean {
     .split(",")
     .map((x) => x.trim().toLowerCase())
     .filter(Boolean);
-  return allowed.includes(r);
+  if (allowed.includes(r)) return true;
+  // Check the in-memory supplement added by the scaffold endpoint.
+  return isExtraAllowedRepo(r);
 }
 
 /** Returns the list of allowed repos (human-readable, original case from env). */

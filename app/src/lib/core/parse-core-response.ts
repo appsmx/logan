@@ -205,6 +205,17 @@ function asActions(value: unknown): CoreAction[] {
       });
     } else if (type === "git_get_status") {
       out.push({ type: "git_get_status", repo: asString(a.repo, "") });
+    } else if (type === "scaffold_project") {
+      const repoMode = asString(a.repoMode, "create") === "existing" ? "existing" : "create";
+      out.push({
+        type: "scaffold_project",
+        productName: asString(a.productName, ""),
+        productSlug: asString(a.productSlug, ""),
+        vision: asString(a.vision, ""),
+        users: asStringArray(a.users),
+        repoMode,
+        ...(repoMode === "existing" && typeof a.repoName === "string" && a.repoName.length > 0 ? { repoName: a.repoName } : {}),
+      });
     }
     // Unknown action types are silently dropped (Art. III — simplicity).
   }
