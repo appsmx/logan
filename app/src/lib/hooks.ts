@@ -21,6 +21,7 @@ import type {
   MarketingAsset,
   DevAsset,
   DesignAsset,
+  FinanceAsset,
   HypothesisInput,
 } from "@/lib/logan-types";
 
@@ -39,6 +40,7 @@ const qk = {
   marketing: (pid: string) => ["marketing", pid] as const,
   dev: (pid: string) => ["dev", pid] as const,
   design: (pid: string) => ["design", pid] as const,
+  finance: (pid: string) => ["finance", pid] as const,
 };
 
 // ---------- Projects ----------
@@ -495,6 +497,39 @@ export function useDeleteDesign(pid: string) {
     mutationFn: (id: string) => api(`/api/design/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.design(pid) });
+      qc.invalidateQueries({ queryKey: qk.hypotheses(pid) });
+    },
+  });
+}
+
+// ---------- Finance ----------
+export function useFinance(pid: string | null) {
+  return useQuery<FinanceAsset[]>({
+    queryKey: pid ? qk.finance(pid) : ["finance", "none"],
+    queryFn: () => (pid ? api<FinanceAsset[]>(`/api/projects/${pid}/finance`) : Promise.resolve([])),
+    enabled: !!pid,
+    placeholderData: [],
+  } as UseQueryOptions<FinanceAsset[]>);
+}
+
+export function useCreateFinance(pid: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { type: string; title: string; content: string; hypothesis?: HypothesisInput }) =>
+      api<FinanceAsset>(`/api/projects/${pid}/finance`, { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.finance(pid) });
+      qc.invalidateQueries({ queryKey: qk.hypotheses(pid) });
+    },
+  });
+}
+
+export function useDeleteFinance(pid: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/finance/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.finance(pid) });
       qc.invalidateQueries({ queryKey: qk.hypotheses(pid) });
     },
   });
