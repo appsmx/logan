@@ -308,7 +308,7 @@ export const ROLES: Role[] = [
     key: "dev",
     name: "Dev",
     kind: "especialista",
-    status: "planificado",
+    status: "activo",
     color: "warning",
     tagline: "Desarrollo de producto.",
     responsibilities: [
@@ -323,7 +323,7 @@ export const ROLES: Role[] = [
     key: "design",
     name: "Design",
     kind: "especialista",
-    status: "planificado",
+    status: "activo",
     color: "destructive",
     tagline: "Diseño de producto y de experiencia.",
     responsibilities: [
@@ -616,4 +616,74 @@ export const LML_REFERENCE = {
   decisionExamples: LML_DECISION_EXAMPLES,
   stateModes: LML_STATE_MODES,
   transitionExample: LML_TRANSITION_EXAMPLE,
+};
+
+// ============================================================
+// DEV CAPABILITIES — Etapa 4.5
+// ============================================================
+export type DevCapability = {
+  key: string;
+  label: string;
+  description: string;
+  producesAssetType: string;
+};
+
+export const DEV_CAPABILITIES: DevCapability[] = [
+  { key: "design_architecture",   label: "Diseñar arquitectura",         description: "Definir estructura técnica: APIs, BD, componentes, patrones de diseño.",                          producesAssetType: "architecture_doc"     },
+  { key: "implement_feature",     label: "Implementar funcionalidad",    description: "Código completo, funcional y listo para producción.",                                              producesAssetType: "code_implementation"  },
+  { key: "refactor_code",         label: "Refactorizar código",          description: "Mejorar estructura, performance o legibilidad sin cambiar el comportamiento externo.",             producesAssetType: "code_refactor"        },
+  { key: "write_tests",           label: "Escribir tests",               description: "Tests unitarios y/o de integración para un módulo específico.",                                   producesAssetType: "test_suite"           },
+  { key: "review_code",           label: "Revisar código",               description: "Identificar bugs, vulnerabilidades y antipatrones en código existente.",                          producesAssetType: "code_review"          },
+  { key: "debug_issue",           label: "Depurar problema",             description: "Diagnóstico y solución de un bug concreto con explicación de la causa raíz.",                     producesAssetType: "bug_fix"              },
+  { key: "define_schema",         label: "Definir esquema de BD",        description: "Modelo Prisma, migraciones, relaciones y justificación de decisiones de datos.",                  producesAssetType: "db_schema"            },
+  { key: "scaffold_project",      label: "Crear scaffold",               description: "Estructura inicial de proyecto o módulo: carpetas, archivos base, convenciones.",                 producesAssetType: "project_scaffold"     },
+  { key: "write_docs",            label: "Documentar técnicamente",      description: "Documentación técnica de un módulo, API o decisión de arquitectura.",                             producesAssetType: "technical_doc"        },
+  { key: "optimize_performance",  label: "Optimizar performance",        description: "Identificar cuellos de botella y proponer soluciones con métricas esperadas.",                    producesAssetType: "performance_report"   },
+  { key: "security_review",       label: "Revisar seguridad",            description: "Identificar vulnerabilidades (OWASP Top 10, etc.) y proponer mitigaciones concretas.",            producesAssetType: "security_report"      },
+];
+
+export const DEV_ASSET_TYPES: Record<string, { label: string; color: string }> = {
+  architecture_doc:    { label: "Documento de arquitectura", color: "primary"     },
+  code_implementation: { label: "Implementación de código",  color: "success"     },
+  code_refactor:       { label: "Refactor de código",        color: "warning"     },
+  test_suite:          { label: "Suite de tests",            color: "muted"       },
+  code_review:         { label: "Revisión de código",        color: "muted"       },
+  bug_fix:             { label: "Corrección de bug",         color: "destructive" },
+  db_schema:           { label: "Esquema de BD",             color: "primary"     },
+  project_scaffold:    { label: "Scaffold de proyecto",      color: "warning"     },
+  technical_doc:       { label: "Documentación técnica",     color: "muted"       },
+  performance_report:  { label: "Reporte de performance",    color: "warning"     },
+  security_report:     { label: "Reporte de seguridad",      color: "destructive" },
+};
+
+// ============================================================
+// DESIGN CAPABILITIES — Etapa 4.5
+// ============================================================
+export type DesignCapability = {
+  key: string;
+  label: string;
+  description: string;
+  producesAssetType: string;
+};
+
+export const DESIGN_CAPABILITIES: DesignCapability[] = [
+  { key: "design_ui",            label: "Diseñar interfaz de usuario",  description: "Especificación completa de UI: layout, componentes, estados, interacciones.",                     producesAssetType: "ui_spec"           },
+  { key: "define_design_system", label: "Definir sistema de diseño",    description: "Paleta de colores oklch, tipografía, espaciado, componentes base y tokens de diseño.",            producesAssetType: "design_system"     },
+  { key: "prototype_flow",       label: "Prototipar flujo",             description: "Flujo de interacción completo con pantallas, transiciones y estados de error.",                   producesAssetType: "interaction_flow"  },
+  { key: "validate_usability",   label: "Validar usabilidad",           description: "Evaluación heurística o análisis de usabilidad con recomendaciones de mejora.",                   producesAssetType: "usability_review"  },
+  { key: "generate_visual_assets", label: "Generar assets visuales",   description: "Especificación de íconos, ilustraciones o imágenes de producto con prompts para generación.",      producesAssetType: "visual_asset"      },
+  { key: "design_handoff",       label: "Handoff a Dev",                description: "Especificaciones técnicas de diseño: medidas exactas, clases Tailwind, componentes shadcn/ui.",   producesAssetType: "design_handoff"    },
+  { key: "design_audit",         label: "Auditar diseño existente",     description: "Revisar consistencia visual, accesibilidad y adherencia al sistema de diseño.",                   producesAssetType: "design_audit"      },
+  { key: "image_asset_prompt",   label: "Prompt para imagen de marca",  description: "Prompt detallado para generar imágenes de producto, ilustraciones o creativos de campaña.",       producesAssetType: "image_asset_prompt"},
+];
+
+export const DESIGN_ASSET_TYPES: Record<string, { label: string; color: string }> = {
+  ui_spec:            { label: "Especificación de UI",     color: "primary"     },
+  design_system:      { label: "Sistema de diseño",        color: "primary"     },
+  interaction_flow:   { label: "Flujo de interacción",     color: "warning"     },
+  usability_review:   { label: "Revisión de usabilidad",   color: "muted"       },
+  visual_asset:       { label: "Asset visual",             color: "success"     },
+  design_handoff:     { label: "Handoff a Dev",            color: "warning"     },
+  design_audit:       { label: "Auditoría de diseño",      color: "destructive" },
+  image_asset_prompt: { label: "Prompt de imagen",         color: "success"     },
 };
