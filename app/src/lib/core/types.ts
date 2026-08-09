@@ -3,8 +3,7 @@
 // Etapa 2: single-LLM orchestrator.
 // Etapa 3: marketing_execute delegation added.
 // Etapa 4.5: dev_execute + design_execute delegation added.
-//
-// These types are deliberately portable (Art. III — simplicity).
+// Analytics: analytics_verify + analytics_patterns delegation added.
 
 import type { Project } from "@prisma/client";
 
@@ -19,7 +18,7 @@ export type CoreAction =
       decision: string;
       justification: string;
       consequences: string;
-      status?: string; // aprobada | propuesta | descartada (default aprobada)
+      status?: string;
     }
   | {
       type: "register_hypothesis";
@@ -29,7 +28,7 @@ export type CoreAction =
       prediction: string;
     }
   | {
-      type: "marketing_proposal"; // LEGACY — Core improvising. Kept for backward compat.
+      type: "marketing_proposal"; // LEGACY
       capability: string;
       title: string;
       content: string;
@@ -38,22 +37,36 @@ export type CoreAction =
       hypothesisPrediction: string;
     }
   | {
-      // Etapa 3 — delegate to the real Marketing specialist endpoint.
       type: "marketing_execute";
-      capability: string; // one of MARKETING_CAPABILITIES keys
+      capability: string;
       brief: string;
     }
   | {
-      // Etapa 4.5 — delegate to the real Dev specialist endpoint.
       type: "dev_execute";
-      capability: string; // one of DEV_CAPABILITIES keys
+      capability: string;
       brief: string;
     }
   | {
-      // Etapa 4.5 — delegate to the real Design specialist endpoint.
       type: "design_execute";
-      capability: string; // one of DESIGN_CAPABILITIES keys
+      capability: string;
       brief: string;
+    }
+  | {
+      // Analytics — verify a single hypothesis by ID.
+      // Core passes the hypothesisId it wants to verify plus what it knows
+      // about the outcome/evidence from the user's message.
+      type: "analytics_verify";
+      hypothesisId: string;
+      outcome: string;   // what actually happened
+      evidence: string;  // data / metrics supporting the outcome
+      brief?: string;    // extra context for the LLM
+    }
+  | {
+      // Analytics — analyze all hypothesis patterns for the project.
+      type: "analytics_patterns";
+      roleFilter?: string;   // optional: "marketing" | "dev" | "design" | "core"
+      statusFilter?: string; // optional: "pendiente" | "refutada" | "verificada"
+      brief?: string;
     };
 
 /** Constitutional self-check that Core includes in its response. */
@@ -84,27 +97,20 @@ export type ActionTaken =
   | { type: "register_decision"; decId: string; id: string }
   | { type: "register_hypothesis"; id: string }
   | { type: "marketing_proposal"; hypothesisId: string; marketingAssetId: string }
+  | { type: "marketing_execute"; capability: string; marketingAssetId: string; hypothesisId: string; title: string }
+  | { type: "dev_execute"; capability: string; devAssetId: string; hypothesisId: string; title: string }
+  | { type: "design_execute"; capability: string; designAssetId: string; hypothesisId: string; title: string }
   | {
-      type: "marketing_execute";
-      capability: string;
-      marketingAssetId: string;
+      type: "analytics_verify";
       hypothesisId: string;
+      verdict: string;          // "verificada" | "refutada"
+      analyticsHypothesisId: string;
       title: string;
     }
   | {
-      // Etapa 4.5
-      type: "dev_execute";
-      capability: string;
-      devAssetId: string;
-      hypothesisId: string;
-      title: string;
-    }
-  | {
-      // Etapa 4.5
-      type: "design_execute";
-      capability: string;
-      designAssetId: string;
-      hypothesisId: string;
+      type: "analytics_patterns";
+      analyticsHypothesisId: string;
+      hypothesesAnalyzed: number;
       title: string;
     };
 
@@ -126,35 +132,32 @@ export type ProjectBibliaContext = Pick<
   "id" | "name" | "vision" | "users" | "status" | "currentPhase" | "currentMode"
 >;
 
-/** A Marketing specialist deliverable for the integration LLM call. */
 export type MarketingDeliverable = {
-  capability: string;
-  capabilityLabel: string;
-  title: string;
-  content: string;
-  hypothesisId: string;
-  marketingAssetId: string;
+  capability: string; capabilityLabel: string; title: string; content: string;
+  hypothesisId: string; marketingAssetId: string;
   hypothesis: { context: string; hypothesis: string; prediction: string };
 };
 
-/** A Dev specialist deliverable for the integration LLM call. */
 export type DevDeliverable = {
-  capability: string;
-  capabilityLabel: string;
-  title: string;
-  content: string;
-  hypothesisId: string;
-  devAssetId: string;
+  capability: string; capabilityLabel: string; title: string; content: string;
+  hypothesisId: string; devAssetId: string;
   hypothesis: { context: string; hypothesis: string; prediction: string };
 };
 
-/** A Design specialist deliverable for the integration LLM call. */
 export type DesignDeliverable = {
-  capability: string;
-  capabilityLabel: string;
-  title: string;
-  content: string;
-  hypothesisId: string;
-  designAssetId: string;
+  capability: string; capabilityLabel: string; title: string; content: string;
+  hypothesisId: string; designAssetId: string;
   hypothesis: { context: string; hypothesis: string; prediction: string };
+};
+
+/** An Analytics deliverable (verify or patterns) for the integration LLM call. */
+export type AnalyticsDeliverable = {
+  kind: "verify" | "patterns";
+  title: string;
+  content: string;           // the markdown report from Analytics
+  verdict?: string;          // "verificada" | "refutada" (only for verify)
+  hypothesisId?: string;     // the hypothesis that was verified (only for verify)
+  analyticsHypothesisId: string;
+  hypothesesAnalyzed?: number; // only for patterns
+  topLearnings?: string[];
 };
