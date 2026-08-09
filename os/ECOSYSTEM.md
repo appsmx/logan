@@ -1,6 +1,6 @@
 # ECOSYSTEM.md
 
-**Versión:** 0.2 · **Estado:** En construcción · **Fecha:** 2026-08-08
+**Versión:** 0.3 · **Estado:** En construcción · **Fecha:** 2026-08-08
 **Propósito:** La memoria institucional de LOGAN. Registra la evolución completa
 del ecosistema para que cualquier persona (o cualquier agente) pueda comprenderla
 leyendo un solo documento.
@@ -20,7 +20,7 @@ leyendo un solo documento.
 | LOGAN Marketing | especialista | activo | 2026-07-29 |
 | LOGAN Dev | especialista | activo | 2026-08-08 |
 | LOGAN Design | especialista | activo | 2026-08-08 |
-| Analytics | especialista | planificado | — |
+| LOGAN Analytics | especialista | activo | 2026-08-08 |
 | Finance | especialista | planificado | — |
 | Legal | especialista | planificado | — |
 | Support | especialista | planificado | — |
@@ -47,6 +47,7 @@ leyendo un solo documento.
 - DEC-LOGAN-014: github.com/appsmx/logan público; productos privados
 
 ## 5. Hitos
+
 ### 2026-07-29 — Inicio oficial de la evolución a LOGAN OS
 - Definida la arquitectura: Core, Memory, especialistas.
 - Definidos los 6 documentos del OS.
@@ -72,18 +73,23 @@ leyendo un solo documento.
 - DEC-001 y DEC-002 de Mr. Trámite importadas a LOGAN.
 
 ### 2026-08-08 — Etapa 4.5 cerrada: LOGAN Dev + LOGAN Design funcionales
-- POST /api/dev/execute con 11 capabilities (design_architecture, implement_feature, refactor_code, write_tests, review_code, debug_issue, define_schema, scaffold_project, write_docs, optimize_performance, security_review).
-- POST /api/design/execute con 8 capabilities (design_ui, define_design_system, prototype_flow, validate_usability, generate_visual_assets, design_handoff, design_audit, image_asset_prompt).
-- Ambos roles persisten Hypothesis + DevAsset/DesignAsset (DEC-LOGAN-004).
-- ROLES.md y ECOSYSTEM.md actualizados: Dev y Design pasan de "planificado" a "activo".
-- Prisma schema extendido con modelos DevAsset y DesignAsset.
+- POST /api/dev/execute con 11 capabilities.
+- POST /api/design/execute con 8 capabilities.
+- Core actualizado: delega a Dev (dev_execute) y Design (design_execute) en paralelo.
+- Prisma schema: modelos DevAsset y DesignAsset añadidos.
 - LOGAN ahora tiene 5 agentes activos: Core, Memory, Marketing, Dev, Design.
 
+### 2026-08-08 — Analytics funcional: bucle de aprendizaje cerrado
+- POST /api/analytics/verify: verifica una hipótesis individual. Recibe outcome + evidencia, actualiza status (verificada/refutada), genera reporte LLM con aprendizaje y recomendación.
+- POST /api/analytics/patterns: analiza patrones de todas las hipótesis de un proyecto. Detecta tendencias, extrae aprendizajes universales (candidatos a LOGAN.md, Art. VIII).
+- Analytics genera su propia hipótesis por cada verificación (DEC-LOGAN-004 — el bucle es completo).
+- LOGAN ahora tiene 6 agentes activos. El bucle completo está operativo: Especialista genera hipótesis → Acción real → Analytics verifica → Aprendizaje extraído → Sistema mejora.
+
 ### Pendiente
-- Etapa 5: Hércules Bro
-- Etapa 6: LOGAN corporativo en logan.mx
-- Analytics funcional (verifica hipótesis de Dev, Design, Marketing)
-- Finance, Legal, Support
+- UI para Dev, Design y Analytics en la app.
+- Etapa 5: Hércules Bro.
+- Etapa 6: LOGAN corporativo en logan.mx.
+- Finance, Legal, Support.
 
 ## 6. Ingresos
 | Producto | Ingresos | Periodo |
