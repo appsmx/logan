@@ -116,6 +116,17 @@ Ejemplos:
 - "¿Qué hemos aprendido de Marketing?" → \`analytics_patterns\` con roleFilter "marketing".
 - "Dame un reporte de aprendizaje del proyecto" → \`analytics_patterns\` sin filtros.
 
+### finance_execute — Finance
+Delega cuando el usuario pida decisiones de dinero: proyecciones financieras, análisis de costos, modelo de precios, viabilidad del proyecto, distribución de presupuesto, métricas unitarias (LTV, CAC), análisis de inversiones, o un reporte financiero general. NO improvises números tú mismo — delega a Finance.
+Keys: \`project_financials\`, \`cost_analysis\`, \`pricing_model\`, \`viability_analysis\`, \`budget_allocation\`, \`unit_economics\`, \`investment_analysis\`, \`financial_report\`.
+
+Ejemplos:
+- "¿Cuánto debería cobrar por Mr. Trámite?" → \`finance_execute\` con capability \`pricing_model\`.
+- "¿Es viable el proyecto con 100 usuarios al mes?" → \`viability_analysis\`.
+- "¿Cómo reparto $5,000 MXN de presupuesto?" → \`budget_allocation\`.
+- "¿Cuál es el LTV de un usuario de Mr. Trámite?" → \`unit_economics\`.
+- "Dame un reporte financiero del estado actual" → \`financial_report\`.
+
 ---
 
 ## Reglas del campo \`actions\`
@@ -123,7 +134,7 @@ Ejemplos:
 - \`register_decision\` solo cuando cumple LOGAN §5.1.
 - \`register_hypothesis\` cuando TÚ (Core) hiciste una predicción no delegada.
 - Puedes emitir múltiples acciones de delegación en un turno.
-- Los 5 tipos de delegación pueden coexistir en el mismo turno.
+- Los 6 tipos de delegación pueden coexistir en el mismo turno.
 
 ## Reglas del campo \`constitutional_check\`
 - \`approved\` = true si respetas los 10 artículos. Si es false: \`violated_article\` = número romano, \`note\` = desacuerdo fundamentado (Art. VII).
@@ -146,8 +157,9 @@ export function buildSystemPrompt(project: ProjectBibliaContext, memoryReport: s
     "- **Dev** (`POST /api/dev/execute`, 11 capabilities): todo trabajo técnico y de código.",
     "- **Design** (`POST /api/design/execute`, 8 capabilities): todo trabajo de diseño y UX.",
     "- **Analytics** (`POST /api/analytics/verify` + `/patterns`, 5 capabilities): verificar hipótesis y analizar patrones de aprendizaje.",
+    "- **Finance** (`POST /api/finance/execute`, 8 capabilities): decisiones de dinero, proyecciones, precios, viabilidad.",
     "",
-    "Cuando el usuario pida trabajo de cualquiera de estos dominios, **delega siempre**. El backend invocará al especialista en paralelo, persistirá el entregable con su hipótesis (DEC-LOGAN-004), y te lo devolverá para integrarlo. Finance, Legal y Support permanecen planificados.",
+    "Cuando el usuario pida trabajo de cualquiera de estos dominios, **delega siempre**. El backend invocará al especialista en paralelo, persistirá el entregable con su hipótesis (DEC-LOGAN-004), y te lo devolverá para integrarlo. Legal y Support permanecen planificados.",
     "",
     "Tu trabajo cada turno:",
     "1. Leer Constitución, LOGAN OS, Roles, Biblia del proyecto y Reporte de Memory.",
@@ -173,3 +185,4 @@ export function buildSystemPrompt(project: ProjectBibliaContext, memoryReport: s
     RESPONSE_FORMAT,
   ].join("\n");
 }
+
