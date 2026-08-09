@@ -1,28 +1,22 @@
 // LOGAN Core — execute actions.
 //
-// Persists each action Core proposed in its structured JSON response. Returns
-// an `actionsTaken` array with the IDs of the created DB rows. Each action is
-// attempted independently: if one fails (DB error or invalid input), it is
-// skipped and the rest still proceed — we never lose a valid action because a
-// sibling failed (Art. III — simplicity; robustness over transactions).
+// Etapa 2: register_decision, register_hypothesis.
+// Etapa 3: marketing_execute delegation added.
+// Etapa 4.5: dev_execute + design_execute delegation added.
 //
-// Etapa 3 (LOGAN Marketing): a new `marketing_execute` action delegates to
-// the Marketing specialist endpoint (POST /api/marketing/execute). The
-// specialist creates its own Hypothesis + MarketingAsset rows; Core just
-// records the IDs in the `actionsTaken` array so the UI can render the badge.
-// The Marketing deliverable's `content` is returned to the Core route which
-// integrates it into the final user-facing response via a second LLM call.
-//
-// On any failure we log to console.error so the orchestrator can surface a
-// degraded-mode warning. The LLM's response is never discarded because of a
-// persistence failure (per the route spec).
-//
-// Comments in English.
+// Each action is attempted independently — if one fails, the rest still
+// proceed (Art. III — robustness over transactions).
 
 import { db } from "@/lib/db";
-import { MARKETING_CAPABILITIES } from "@/lib/logan-os-data";
-import type { ActionTaken, CoreAction, MarketingDeliverable } from "@/lib/core/types";
-import type { ConstitutionalCheck } from "@/lib/core/types";
+import { MARKETING_CAPABILITIES, DEV_CAPABILITIES, DESIGN_CAPABILITIES } from "@/lib/logan-os-data";
+import type {
+  ActionTaken,
+  CoreAction,
+  ConstitutionalCheck,
+  MarketingDeliverable,
+  DevDeliverable,
+  DesignDeliverable,
+} from "@/lib/core/types";
 
 async function nextDecId(projectId: string): Promise<string> {
   const count = await db.decision.count({ where: { projectId } });
@@ -31,21 +25,23 @@ async function nextDecId(projectId: string): Promise<string> {
 
 function marketingAssetTypeFor(capabilityKey: string): string {
   const cap = MARKETING_CAPABILITIES.find((c) => c.key === capabilityKey);
-  if (cap && cap.producesAssetType) return cap.producesAssetType;
-  return "improvement_proposal";
+  return cap?.producesAssetType ?? "improvement_proposal";
 }
 
 function marketingCapabilityLabel(capabilityKey: string): string {
-  const cap = MARKETING_CAPABILITIES.find((c) => c.key === capabilityKey);
-  return cap?.label ?? capabilityKey;
+  return MARKETING_CAPABILITIES.find((c) => c.key === capabilityKey)?.label ?? capabilityKey;
 }
 
-/**
- * Calls the Marketing specialist endpoint internally (server-to-server fetch
- * within the same Next.js app). The specialist creates its own Hypothesis +
- * MarketingAsset rows. We return the deliverable so the Core route can
- * integrate it into the final user-facing response.
- */
+function devCapabilityLabel(capabilityKey: string): string {
+  return DEV_CAPABILITIES.find((c) => c.key === capabilityKey)?.label ?? capabilityKey;
+}
+
+function designCapabilityLabel(capabilityKey: string): string {
+  return DESIGN_CAPABILITIES.find((c) => c.key === capabilityKey)?.label ?? capabilityKey;
+}
+
+// ─── Specialist endpoint callers ────────────────────────────────────────────
+
 async function callMarketingEndpoint(
   projectId: string,
   capability: string,
@@ -65,18 +61,11 @@ async function callMarketingEndpoint(
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      console.error(
-        "[core] marketing_execute: endpoint returned",
-        res.status,
-        (err as { error?: string }).error || "",
-      );
+      console.error("[core] marketing_execute:", res.status, (err as { error?: string }).error || "");
       return null;
     }
-    const data = (await res.json()) as {
-      marketingAssetId: string;
-      hypothesisId: string;
-      title: string;
-      content: string;
+    const data = await res.json() as {
+      marketingAssetId: string; hypothesisId: string; title: string; content: string;
       hypothesis: { context: string; hypothesis: string; prediction: string; id: string; status: string };
     };
     return {
@@ -91,15 +80,98 @@ async function callMarketingEndpoint(
       },
     };
   } catch (e) {
-    console.error(
-      "[core] marketing_execute: fetch falló",
-      "capability=",
-      capability,
-      (e as Error).message,
-    );
+    console.error("[core] marketing_execute fetch falló:", capability, (e as Error).message);
     return null;
   }
 }
+
+async function callDevEndpoint(
+  projectId: string,
+  capability: string,
+  brief: string,
+): Promise<{
+  devAssetId: string;
+  hypothesisId: string;
+  title: string;
+  content: string;
+  hypothesis: { context: string; hypothesis: string; prediction: string };
+} | null> {
+  try {
+    const res = await fetch("http://localhost:3000/api/dev/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId, capability, brief }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error("[core] dev_execute:", res.status, (err as { error?: string }).error || "");
+      return null;
+    }
+    const data = await res.json() as {
+      devAssetId: string; hypothesisId: string; title: string; content: string;
+      hypothesis: { context: string; hypothesis: string; prediction: string; id: string; status: string };
+    };
+    return {
+      devAssetId: data.devAssetId,
+      hypothesisId: data.hypothesisId,
+      title: data.title,
+      content: data.content,
+      hypothesis: {
+        context: data.hypothesis?.context ?? "",
+        hypothesis: data.hypothesis?.hypothesis ?? "",
+        prediction: data.hypothesis?.prediction ?? "",
+      },
+    };
+  } catch (e) {
+    console.error("[core] dev_execute fetch falló:", capability, (e as Error).message);
+    return null;
+  }
+}
+
+async function callDesignEndpoint(
+  projectId: string,
+  capability: string,
+  brief: string,
+): Promise<{
+  designAssetId: string;
+  hypothesisId: string;
+  title: string;
+  content: string;
+  hypothesis: { context: string; hypothesis: string; prediction: string };
+} | null> {
+  try {
+    const res = await fetch("http://localhost:3000/api/design/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId, capability, brief }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error("[core] design_execute:", res.status, (err as { error?: string }).error || "");
+      return null;
+    }
+    const data = await res.json() as {
+      designAssetId: string; hypothesisId: string; title: string; content: string;
+      hypothesis: { context: string; hypothesis: string; prediction: string; id: string; status: string };
+    };
+    return {
+      designAssetId: data.designAssetId,
+      hypothesisId: data.hypothesisId,
+      title: data.title,
+      content: data.content,
+      hypothesis: {
+        context: data.hypothesis?.context ?? "",
+        hypothesis: data.hypothesis?.hypothesis ?? "",
+        prediction: data.hypothesis?.prediction ?? "",
+      },
+    };
+  } catch (e) {
+    console.error("[core] design_execute fetch falló:", capability, (e as Error).message);
+    return null;
+  }
+}
+
+// ─── executeOne ──────────────────────────────────────────────────────────────
 
 async function executeOne(
   projectId: string,
@@ -109,38 +181,19 @@ async function executeOne(
   try {
     if (action.type === "register_decision") {
       const decId = await nextDecId(projectId);
-      // Ensure at least 2 alternatives (per LOGAN §5); if Core gave fewer, we
-      // add a placeholder so the row is still valid.
       const alts =
         Array.isArray(action.alternatives) && action.alternatives.length >= 2
           ? action.alternatives.filter((x) => typeof x === "string" && x.length > 0)
           : [
-              ...(action.alternatives || []).filter(
-                (x) => typeof x === "string" && x.length > 0,
-              ),
+              ...(action.alternatives || []).filter((x) => typeof x === "string" && x.length > 0),
               "(no se consideraron alternativas explícitas)",
             ];
 
-      // ART. IX OPERATIONALIZED IN THE PERSISTENCE LAYER:
-      // If the constitutional validator flagged this turn as a violation,
-      // we MUST NOT persist the decision as "aprobada". We downgrade it to
-      // "propuesta" (pending human criterion) and append a visible note to
-      // the justification. The human decides whether to approve, modify, or
-      // discard (Art. IX — the human has the final word).
-      //
-      // Previously: this code persisted `action.status || "aprobada"`
-      // unconditionally, which meant a Core turn that violated the
-      // Constitution (e.g. "delete Art. IX") would be recorded as an
-      // approved decision even when the validator flagged it. That bug
-      // produced ghost DEC-XXX rows like the DEC-011 "Eliminación del
-      // Artículo IX — aprobada" the user found in the published app.
       const wasFlagged = !!constitutional && constitutional.approved === false;
-      const originalStatus = (action.status || "aprobada").trim();
-      const finalStatus = wasFlagged ? "propuesta" : originalStatus;
-      const originalJustification = action.justification || "";
+      const finalStatus = wasFlagged ? "propuesta" : (action.status || "aprobada").trim();
       const justification = wasFlagged
-        ? `${originalJustification}\n\n---\n⚠️ VALIDACIÓN CONSTITUCIONAL (Art. VII/IX): El validador flaggeó este turno como posible violación del Art. ${constitutional?.violated_article || "?"}. ${constitutional?.note || ""}\nEsta decisión queda como "propuesta" pendiente de tu criterio humano. Tú decides: aprobar, modificar o descartar.`
-        : originalJustification;
+        ? `${action.justification || ""}\n\n---\n⚠️ VALIDACIÓN CONSTITUCIONAL (Art. VII/IX): posible violación del Art. ${constitutional?.violated_article || "?"}. ${constitutional?.note || ""}\nEsta decisión queda como "propuesta" pendiente de tu criterio humano.`
+        : (action.justification || "");
 
       const created = await db.decision.create({
         data: {
@@ -176,9 +229,6 @@ async function executeOne(
     }
 
     if (action.type === "marketing_proposal") {
-      // LEGACY: Core improvising a marketing deliverable. Kept for backward
-      // compat with responses that still use this action type. Etapa 3
-      // routes this kind of work through `marketing_execute` instead.
       const hyp = await db.hypothesis.create({
         data: {
           projectId,
@@ -191,50 +241,32 @@ async function executeOne(
           evidence: "",
         },
       });
-      const assetType = marketingAssetTypeFor(action.capability);
       const asset = await db.marketingAsset.create({
         data: {
           projectId,
-          type: assetType,
+          type: marketingAssetTypeFor(action.capability),
           title: action.title || "(sin título)",
           content: action.content || "",
           hypothesisId: hyp.id,
         },
       });
-      return {
-        type: "marketing_proposal",
-        hypothesisId: hyp.id,
-        marketingAssetId: asset.id,
-      };
+      return { type: "marketing_proposal", hypothesisId: hyp.id, marketingAssetId: asset.id };
     }
 
-    // marketing_execute is handled by `executeMarketingDelegations` (below)
-    // because the route needs the full deliverable for the integration step,
-    // not just the persisted IDs. We return null here so the legacy
-    // `executeActions` flow (used by tests / callers that don't need
-    // integration) skips it cleanly.
+    // marketing_execute / dev_execute / design_execute handled by their
+    // respective delegation functions below.
     return null;
   } catch (e) {
-    console.error(
-      "[core] execute-actions: fallo persistiendo acción",
-      "type" in action ? action.type : "unknown",
-      (e as Error).message,
-    );
+    console.error("[core] execute-actions: fallo persistiendo acción", "type" in action ? action.type : "unknown", (e as Error).message);
     return null;
   }
 }
 
+// ─── Public API ──────────────────────────────────────────────────────────────
+
 /**
- * Persists all NON-MARKETING actions for a project (register_decision,
- * register_hypothesis, legacy marketing_proposal). The new
- * `marketing_execute` actions are deliberately skipped here — they are
- * handled separately by `executeMarketingDelegations` so the route can
- * collect the deliverables for the integration LLM call.
- *
- * Art. IX operationalized: if `constitutional` is passed and the validator
- * flagged a violation, any `register_decision` action is persisted with
- * status "propuesta" (not "aprobada") and a visible note in the
- * justification. The human retains the final word.
+ * Persists all NON-SPECIALIST actions (register_decision, register_hypothesis,
+ * legacy marketing_proposal). Specialist delegations are handled separately.
  */
 export async function executeActions(
   projectId: string,
@@ -243,81 +275,96 @@ export async function executeActions(
 ): Promise<ActionTaken[]> {
   const results: ActionTaken[] = [];
   for (const action of actions) {
-    if (action.type === "marketing_execute") continue;
+    if (
+      action.type === "marketing_execute" ||
+      action.type === "dev_execute" ||
+      action.type === "design_execute"
+    ) continue;
     const r = await executeOne(projectId, action, constitutional);
     if (r) results.push(r);
   }
   return results;
 }
 
-/**
- * Executes every `marketing_execute` action by calling the Marketing
- * specialist endpoint. Returns:
- *   - `actionsTaken`: the marketing_execute entries (with marketingAssetId +
- *     hypothesisId + title) for the UI badges.
- *   - `deliverables`: the full deliverables (title, content, hypothesis) for
- *     the Core integration LLM call.
- *
- * Failed delegations are logged and skipped — the rest still proceed. If a
- * delegation fails, we still return an entry in `actionsTaken` with empty
- * IDs so the UI can show the user that the delegation was attempted (Art. VII
- * — surface the failure).
- */
+/** Executes every `marketing_execute` action in parallel. */
 export async function executeMarketingDelegations(
   projectId: string,
   actions: CoreAction[],
-): Promise<{
-  actionsTaken: ActionTaken[];
-  deliverables: MarketingDeliverable[];
-}> {
+): Promise<{ actionsTaken: ActionTaken[]; deliverables: MarketingDeliverable[] }> {
   const actionsTaken: ActionTaken[] = [];
   const deliverables: MarketingDeliverable[] = [];
 
-  const marketingActions = actions.filter(
-    (a): a is Extract<CoreAction, { type: "marketing_execute" }> =>
-      a.type === "marketing_execute",
+  const filtered = actions.filter(
+    (a): a is Extract<CoreAction, { type: "marketing_execute" }> => a.type === "marketing_execute",
   );
 
-  // Parallelize the specialist calls — they're independent.
   const results = await Promise.all(
-    marketingActions.map(async (action) => {
-      const r = await callMarketingEndpoint(
-        projectId,
-        action.capability,
-        action.brief,
-      );
-      return { action, result: r };
-    }),
+    filtered.map(async (action) => ({ action, result: await callMarketingEndpoint(projectId, action.capability, action.brief) })),
   );
 
   for (const { action, result } of results) {
     if (!result) {
-      // Surface the failure to the user via the actions footer.
-      actionsTaken.push({
-        type: "marketing_execute",
-        capability: action.capability,
-        marketingAssetId: "",
-        hypothesisId: "",
-        title: "(delegación fallida)",
-      });
+      actionsTaken.push({ type: "marketing_execute", capability: action.capability, marketingAssetId: "", hypothesisId: "", title: "(delegación fallida)" });
       continue;
     }
-    actionsTaken.push({
-      type: "marketing_execute",
-      capability: action.capability,
-      marketingAssetId: result.marketingAssetId,
-      hypothesisId: result.hypothesisId,
-      title: result.title,
-    });
-    deliverables.push({
-      capability: action.capability,
-      capabilityLabel: marketingCapabilityLabel(action.capability),
-      title: result.title,
-      content: result.content,
-      hypothesisId: result.hypothesisId,
-      marketingAssetId: result.marketingAssetId,
-      hypothesis: result.hypothesis,
-    });
+    actionsTaken.push({ type: "marketing_execute", capability: action.capability, marketingAssetId: result.marketingAssetId, hypothesisId: result.hypothesisId, title: result.title });
+    deliverables.push({ capability: action.capability, capabilityLabel: marketingCapabilityLabel(action.capability), title: result.title, content: result.content, hypothesisId: result.hypothesisId, marketingAssetId: result.marketingAssetId, hypothesis: result.hypothesis });
+  }
+
+  return { actionsTaken, deliverables };
+}
+
+/** Executes every `dev_execute` action in parallel. */
+export async function executeDevDelegations(
+  projectId: string,
+  actions: CoreAction[],
+): Promise<{ actionsTaken: ActionTaken[]; deliverables: DevDeliverable[] }> {
+  const actionsTaken: ActionTaken[] = [];
+  const deliverables: DevDeliverable[] = [];
+
+  const filtered = actions.filter(
+    (a): a is Extract<CoreAction, { type: "dev_execute" }> => a.type === "dev_execute",
+  );
+
+  const results = await Promise.all(
+    filtered.map(async (action) => ({ action, result: await callDevEndpoint(projectId, action.capability, action.brief) })),
+  );
+
+  for (const { action, result } of results) {
+    if (!result) {
+      actionsTaken.push({ type: "dev_execute", capability: action.capability, devAssetId: "", hypothesisId: "", title: "(delegación fallida)" });
+      continue;
+    }
+    actionsTaken.push({ type: "dev_execute", capability: action.capability, devAssetId: result.devAssetId, hypothesisId: result.hypothesisId, title: result.title });
+    deliverables.push({ capability: action.capability, capabilityLabel: devCapabilityLabel(action.capability), title: result.title, content: result.content, hypothesisId: result.hypothesisId, devAssetId: result.devAssetId, hypothesis: result.hypothesis });
+  }
+
+  return { actionsTaken, deliverables };
+}
+
+/** Executes every `design_execute` action in parallel. */
+export async function executeDesignDelegations(
+  projectId: string,
+  actions: CoreAction[],
+): Promise<{ actionsTaken: ActionTaken[]; deliverables: DesignDeliverable[] }> {
+  const actionsTaken: ActionTaken[] = [];
+  const deliverables: DesignDeliverable[] = [];
+
+  const filtered = actions.filter(
+    (a): a is Extract<CoreAction, { type: "design_execute" }> => a.type === "design_execute",
+  );
+
+  const results = await Promise.all(
+    filtered.map(async (action) => ({ action, result: await callDesignEndpoint(projectId, action.capability, action.brief) })),
+  );
+
+  for (const { action, result } of results) {
+    if (!result) {
+      actionsTaken.push({ type: "design_execute", capability: action.capability, designAssetId: "", hypothesisId: "", title: "(delegación fallida)" });
+      continue;
+    }
+    actionsTaken.push({ type: "design_execute", capability: action.capability, designAssetId: result.designAssetId, hypothesisId: result.hypothesisId, title: result.title });
+    deliverables.push({ capability: action.capability, capabilityLabel: designCapabilityLabel(action.capability), title: result.title, content: result.content, hypothesisId: result.hypothesisId, designAssetId: result.designAssetId, hypothesis: result.hypothesis });
   }
 
   return { actionsTaken, deliverables };
