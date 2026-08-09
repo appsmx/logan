@@ -37,33 +37,6 @@ Recibe mandatos de LOGAN Core. Devuelve entregables de código + hipótesis. Nun
 
 ---
 
-## Mandato típico
-
-```
-{
-  "capability": "implement_feature",
-  "brief": "Implementar el endpoint POST /api/analytics/verify que recibe un hypothesisId y un outcome, actualiza el status de la hipótesis a 'verificada' o 'refutada', y registra la evidencia. Stack: Next.js 16 + TypeScript + Prisma (SQLite). Seguir el patrón del endpoint /api/marketing/execute."
-}
-```
-
----
-
-## Entregable típico
-
-```json
-{
-  "title": "Endpoint POST /api/analytics/verify — implementación completa",
-  "content": "## Descripción\n\nEndpoint que cierra el bucle de hipótesis...\n\n## Código\n\n```typescript\n// ...\n```\n\n## Decisiones técnicas\n\n- DEC-DEV-001: Se eligió validación con Zod porque...\n\n## Instrucciones de integración\n\n1. Agregar el archivo en `app/src/app/api/analytics/verify/route.ts`\n2. ...",
-  "hypothesis": {
-    "context": "Implementando el endpoint de verificación de hipótesis para cerrar el bucle de aprendizaje",
-    "hypothesis": "Creemos que este endpoint permitirá a Analytics verificar hipótesis en menos de 200ms porque la query a SQLite por ID es O(1) con el índice primario",
-    "prediction": "El endpoint responde en < 200ms para el 95% de las peticiones en el entorno de desarrollo"
-  }
-}
-```
-
----
-
 ## Capabilities (11)
 
 | Key | Label | Descripción | Tipo de entregable |
@@ -82,13 +55,30 @@ Recibe mandatos de LOGAN Core. Devuelve entregables de código + hipótesis. Nun
 
 ---
 
+## Mandato típico
+
+```json
+{
+  "capability": "implement_feature",
+  "brief": "Implementar el endpoint POST /api/analytics/verify que recibe un hypothesisId y un outcome, actualiza el status a 'verificada' o 'refutada', y registra la evidencia. Stack: Next.js 16 + TypeScript + Prisma (SQLite). Seguir el patrón de /api/marketing/execute."
+}
+```
+
+---
+
+## Entregable típico
+
+Código completo + decisiones técnicas documentadas (DEC-XXX) + instrucciones de integración + hipótesis técnica verificable.
+
+---
+
 ## Hipótesis típica
 
 ```json
 {
   "context": "Al implementar [funcionalidad], se eligió [decisión técnica] sobre [alternativa]",
   "hypothesis": "Creemos que [decisión] producirá [resultado técnico] porque [razonamiento]",
-  "prediction": "Métrica medible: tiempo de respuesta < Xms, cobertura de tests > X%, tamaño de bundle < XKB, etc."
+  "prediction": "Métrica medible: tiempo de respuesta < Xms, cobertura de tests > X%, tamaño de bundle < XKB"
 }
 ```
 
