@@ -996,3 +996,105 @@ URLs (preview via the Preview Panel on the right side of the interface — click
   ```
 - Or via LOGAN Core: tell Core "Crea un nuevo proyecto llamado 'X' con slug 'y'. Visión: ... Usuarios: ..." and Core will emit a `scaffold_project` action that the backend will execute.
 - Existing LOGAN OS app at `/` is unchanged (the scaffold endpoint is server-side only).
+
+---
+Task ID: 29
+Agent: full-stack-developer
+Task: Build Memory with git access — upgrade the Memory role so it can read GitHub repos (last commits, changed files, branches, PRs) and feed that to Core as real context. Before, Memory only read the BD; now it can fetch actual repo state.
+
+Work Log:
+- Read worklog.md (full project history — esp. Task 1 constitution, Task 23 git tools, Task 26 project↔repo mapping fix, Task 28 scaffold with the in-memory allowed-repos supplement pattern). Read docs/LOGAN.md (the Constitution — Art. I knowledge is a strategic asset, Art. III simplicity, Art. IV single source of truth, Art. IX Memory is architect-collaborator not decider). Read existing patterns: src/lib/core/memory-report.ts (current Memory Report builder — reads BD only), src/lib/git/github-client.ts (githubFetch, isRepoAllowed, repoPath, getOwner), src/lib/git/tools.ts (git_get_status pattern as a model), src/app/api/core/route.ts (where Memory is called + parallel delegation pattern), src/lib/core/system-prompt.ts (where the Memory Report gets embedded), prisma/schema.prisma (Project.repo String?, MemoryEntry model). Note: the task spec mentioned `os/MEMORY.md` and `/home/z/my-project/os/` — neither exists; the Memory role is operationalized via the Memory Report builder + the `memoryEntry` table + the `/api/projects/[id]/memory` route (verified).
+
+- **Created `src/lib/core/memory-git.ts`** (~310 lines):
+  - Public types: `RepoCommit` (sha, message, date, author), `RepoFile` (path, status), `RepoBranch` (name, lastCommitDate), `RepoPR` (number, title, author, branch), `RepoState` (repo, defaultBranch, lastCommit, totalCommits, recentCommits[5], recentFiles, activeBranches, openPRs, partialErrors[], fetchedAt).
+  - Internal GitHub API types: GitHubRepoMeta, GitHubCommitListItem, GitHubCommitDetail (with files[]), GitHubBranch, GitHubPull.
+  - Constants: `DEFAULT_BRANCH_NAMES` (main/master/prod/production/develop — filtered out of activeBranches), `MAX_RECENT_FILES=50`, `COMMITS_PER_PAGE=5`.
+  - `fetchRepoState(repo): Promise<RepoState | null>` — returns null if repo is empty OR `isRepoAllowed(repo)` is false (uses the same env+supplement logic as the git tools, so newly scaffolded repos from Task 28 also work). Otherwise fires 4 parallel `githubFetch` calls via `Promise.allSettled`: (1) `/repos/{owner}/{repo}` for default_branch, (2) `/commits?per_page=5` for recent commits, (3) `/branches?per_page=100` for active branches, (4) `/pulls?state=open&per_page=100` for open PRs. If the metadata call (1) fails (404/network), returns null entirely — there's no point fetching more for a repo that doesn't exist. If any other call fails, that field is set to empty + a partialErrors string is added. Second wave: fetches each non-main branch's tip commit (`/commits/{sha}`) to get its date, in parallel via Promise.allSettled. Third wave (also parallel): fetches `/commits/{sha}` for the last 3 commits to extract `files[].filename` + `files[].status`, deduped by path (first commit wins = most recent state).
+  - `fetchTotalCommits(repo)` — uses the GitHub API Link-header trick: fetches `/commits?per_page=1` and parses `rel="last"` to extract `page=N` where N = total commit count when per_page=1. Falls back to counting the JSON body if no Link header (repos with ≤1 commit). Returns null gracefully on any failure.
+  - `formatRepoStateForReport(state): string` — produces the 5 markdown sections per spec: `## Estado del repositorio GitHub` (repo, branch, last commit, total commits), `## Cambios recientes (últimos 5 commits)` (5 commits with sha/date/author/message), `## Archivos modificados recientemente` (paths + status), `## Branches activos` (non-main branches with last commit date), `## PRs abiertos` (number/title/author/branch). Each section renders an empty-state line when there's no data. If `partialErrors.length > 0`, appends a note explaining which calls failed (Art. IX — elevate the ambiguity, Core/human decides what to do).
+  - `mapCommitListItem(c)` and `fmtIsoDate(iso)` helpers. ISO date sliced to YYYY-MM-DD to avoid timezone ambiguity in the report.
+  - Read-only — Memory NEVER modifies repos (Art. III). All `githubFetch` calls are GET (default). No PUT/POST/PATCH.
+
+- **Modified `src/lib/core/memory-report.ts`** (~30 lines changed):
+  - Updated top-of-file header to explain Task 29 (Memory now reads repo state too).
+  - Added import: `import { fetchRepoState, formatRepoStateForReport } from "@/lib/core/memory-git";`
+  - Refactored `buildMemoryReport(projectId)`: now fetches the project FIRST (1 DB call ~1ms), short-circuits if not found, THEN runs Promise.all of the 5 existing BD queries PLUS `fetchRepoState(project.repo)` (or `Promise.resolve(null)` if no repo). This runs the GitHub API call in parallel with the BD queries — hides most of the ~1-3s latency. 
+  - Added a 7th section "Repo state" at the end of the report. Three cases handled: (1) project.repo set + fetchRepoState succeeded → appends `formatRepoStateForReport(state)` (the 5 markdown sections). (2) project.repo set + fetchRepoState returned null → appends a graceful note explaining the API failed or the repo isn't allowed. (3) project.repo NOT set → appends a graceful note that no repo is configured, prompting Core to ask the user before emitting git actions.
+
+- **Skipped the optional `git_detect_changes` action** (per spec: "optional, for explicit change detection"). The main deliverable is the Memory Report upgrade, which is complete and verified. Adding a new Core action type would require modifying 6 files (types, system-prompt, execute-actions, parse-core-response, route, git/tools) for marginal value — the Memory Report already gives Core real repo state every turn, so the diff-since-last-session case is naturally handled by Core comparing the report against its memory of the previous turn.
+
+Verification (all passed):
+1. **Lint clean** — `bun run lint` exit 0, zero errors.
+2. **Dev log clean** — no compile errors, no `[memory-git]` errors. POST /api/core returning HTTP 200 in 4.9s, 7.4s, 9.6s (the GitHub fetch adds ~1-3s to the overall Core turn, well within acceptable bounds).
+3. **Mariscos El Jona test** (project `cmsll0amf000sndyiwmi0bf7n`, repo=`mariscoseljona`):
+   - Asked Core: "¿Qué sabes del repositorio de Mariscos El Jona? Dame el último commit y archivos recientes."
+   - Core's response: "Conozco el repositorio de Mariscos El Jona. (...) El último commit es `67d3b95` del 2026-08-09 con el mensaje 'docs: Biblia_MariscosElJona.md v0.1 — documentación inicial del producto'. Los archivos recientemente modificados incluyen la Biblia del proyecto, componentes del catálogo de productos, el agente IA, y el esquema de Prisma. El repositorio tiene 19 commits en total y no hay ramas activas fuera de main ni PRs abiertos actualmente."
+   - Verified: Core referenced REAL git data (commit SHA, message, date, total commit count, file list) — not generic "I know about Mariscos El Jona". The LLM consumed the new Memory Report sections and answered specifically.
+4. **Mr. Trámite test** (project `cmslgu1ew0000ndgeb08qgp32`, repo=`mrtramite`):
+   - Core's response: "El repositorio Mr. Trámite está activo. El último commit en la rama main es 'b44ef9c' con el mensaje 'TITAN audit fixes: 5 criticos + 5 altos + 2 medios', realizado el 31 de julio de 2026 por appsmx. En total, el repositorio tiene 36 commits. No hay ramas activas fuera de main/master ni Pull Requests abiertos. Los archivos modificados más recientemente incluyen el archivo de configuración de Next.js, servicios de expediente, y componentes de la landing page."
+   - Verified: different repo, different commit data, different file list — confirms the fetchRepoState reads the actual repo per-project.
+5. **No-repo project test** (created "Test No Repo (Task29)" without a repo field):
+   - Core's response correctly handled the graceful note: "no se ha configurado un repositorio GitHub asociado". No errors. Cleaned up via DELETE (HTTP 204).
+6. **Non-allowed repo test** (created "Test Bad Repo (Task29)" with `repo="non-existent-repo-xyz"` — not in LOGAN_ALLOWED_REPOS):
+   - fetchRepoState returned null gracefully (isRepoAllowed() = false). Memory Report showed the "No se pudo acceder al repositorio" note. Core responded gracefully: "actualmente no tienes un repositorio GitHub configurado para este proyecto... Si deseas trabajar con código o archivos, necesitarás indicarme qué repositorio debo usar (debe estar en la lista permitida: mrtramite, mariscoseljona). ¿Quieres que configure un repositorio para este proyecto o vas a trabajar con uno existente?" Cleaned up via DELETE (HTTP 204).
+
+Sample Memory Report output for `mariscoseljona` (captured by running fetchRepoState + formatRepoStateForReport directly via a one-off bun script):
+
+```
+## Estado del repositorio GitHub
+
+- **Repositorio:** `mariscoseljona`
+- **Branch por defecto:** main
+- **Último commit:** `67d3b95` — "docs: Biblia_MariscosElJona.md v0.1 — documentación inicial del producto (#1)" (2026-08-09, appsmx)
+- **Total de commits:** 19
+
+## Cambios recientes (últimos 5 commits)
+
+- `67d3b95` (2026-08-09) appsmx — docs: Biblia_MariscosElJona.md v0.1 — documentación inicial del producto (#1)
+- `51ba999` (2026-08-05) Z User — Fix: catalog channel label + AI agent fallback for Vercel
+- `aeb49c8` (2026-08-05) Z User — Deploy: migrate to PostgreSQL for Vercel compatibility
+- `e0bd896` (2026-08-05) Z User — Security: remove .env and database from git tracking
+- `edc9dbc` (2026-08-05) Z User — b5fd524d-d62e-4197-a45f-f6f0f4ba127f
+
+## Archivos modificados recientemente
+
+- `Biblia_MariscosElJona.md` (added)
+- `src/components/site/ProductCatalog.tsx` (modified)
+- `src/lib/ai-agent.ts` (modified)
+- `.env.example` (modified)
+- `package.json` (modified)
+- `prisma/schema.prisma` (modified)
+
+## Branches activos
+
+- (no hay branches activos fuera de main/master)
+
+## PRs abiertos
+
+- (no hay PRs abiertos)
+```
+
+(Meta: totalCommits=19, recentCommits=5, recentFiles=6, activeBranches=0, openPRs=0, partialErrors=[] — all 4+3 parallel API calls succeeded.)
+
+Stage Summary:
+LOGAN Memory now reads the project's GitHub repo (when configured + allowed) and surfaces real git state to Core as part of the Memory Report. Five new markdown sections — Estado del repositorio, Cambios recientes (últimos 5 commits), Archivos modificados recientemente, Branches activos, PRs abiertos — are appended to the existing BD-based Memory Report. Core consumes them as additional context and can answer questions about the repo specifically (last commit, recent files, branches, PRs) without needing to delegate to git_get_status first.
+
+Architecture is read-only (Art. III — Memory never modifies repos) and parallel (4 + N API calls via Promise.allSettled, with graceful partial-failure handling). The repo IS the single source of truth for code (Art. IV) — Memory reads it live, doesn't duplicate it in the BD. Memory elevates ambiguities (partialErrors note) rather than deciding what they mean (Art. IX — Core/human decides).
+
+Three degradation paths are all handled gracefully: (1) project has no repo → "no repo configured" note in the report. (2) project.repo set but not in allowed list (or API fails) → "no se pudo acceder al repositorio" note. (3) some specific API calls fail (e.g. branches 403 but commits 200) → partial state returned + partialErrors note in the report, rest of the report stays valid.
+
+The fetchRepoState function uses the existing `githubFetch` + `isRepoAllowed` + `repoPath` + `getOwner` helpers from `src/lib/git/github-client.ts` — same auth, same allowed-repos logic (env LOGAN_ALLOWED_REPOS + the in-memory supplement from Task 28). This means newly scaffolded repos work without a server restart. Rate-limit safe: at most ~10-15 GitHub API calls per Core turn, well under the 5000/hour limit.
+
+Files created: `src/lib/core/memory-git.ts` (~310 lines). Files modified: `src/lib/core/memory-report.ts` (top comment + import + refactored Promise.all + new 7th section). No new API routes, no DB schema changes, no UI changes — the Memory Report is consumed by Core as part of the system prompt. Existing LOGAN OS app at `/` is unchanged.
+
+The optional `git_detect_changes` action was skipped per the spec ("only add this if time permits") — the main deliverable (Memory Report upgrade with real git data) is complete and verified, and Core can already detect changes between turns by comparing the Memory Report it just read against its memory of the previous turn's report.
+
+URLs (preview via the Preview Panel on the right side of the interface — click "Open in New Tab" to view externally):
+- The Memory git access is backend logic consumed by Core — no new UI route. To see it in action:
+  ```bash
+  # Get a projectId (Mariscos El Jona has repo=mariscoseljona)
+  curl -s http://localhost:3000/api/projects | python3 -c "import sys,json; d=json.load(sys.stdin); print([p['id'] for p in d if p['name']=='Mariscos El Jona'][0])"
+  # Ask Core about the repo
+  curl -X POST http://localhost:3000/api/core -H 'Content-Type: application/json' -d '{"projectId":"<id>","message":"¿Qué sabes del repositorio? Dame el último commit y archivos recientes."}'
+  ```
+- The response will reference real git data (commit SHAs, file paths, branch list, PR list) because the Memory Report now includes those sections. Existing LOGAN OS app at `/` is unchanged (the Memory git access is server-side only — Core sees it in the system prompt, users see the result in Core's responses).

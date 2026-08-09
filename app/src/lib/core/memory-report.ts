@@ -5,12 +5,14 @@
 // current state of the project from the DB so Core can decide with context
 // without re-reading the entire history.
 //
-// This is the operationalization of the LOGAN Memory role in the MVP: instead
-// of a separate agent that reads GitHub and writes summaries, we read the DB.
-// It satisfies Art. III (simplicity) — the simplest thing that gives Core the
-// orientation Memory promises in the full design.
+// Task 29: the Memory Report now ALSO includes the live state of the project's
+// GitHub repo (last commits, changed files, branches, PRs). The repo is the
+// single source of truth for code (Art. IV); Memory reads it via
+// `fetchRepoState()` so Core sees real git state, not just what's in the BD.
+// Read-only — Memory never modifies repos (Art. III — simplicidad).
 
 import { db } from "@/lib/db";
+import { fetchRepoState, formatRepoStateForReport } from "@/lib/core/memory-git";
 
 function parseUsers(raw: string): string[] {
   try {
@@ -70,15 +72,24 @@ const MODE_LABELS: Record<string, string> = {
  * Returns the full Markdown string starting with the section heading.
  */
 export async function buildMemoryReport(projectId: string): Promise<string> {
-  const [
-    project,
-    decisions,
-    hypotheses,
-    backlogCounts,
-    latestSession,
-    phaseProgress,
-  ] = await Promise.all([
-    db.project.findUnique({ where: { id: projectId } }),
+  // Step 1: get the project first. We need `project.repo` to know whether to
+  // fire the GitHub fetch. This is 1 DB call (~1ms) — the cost is negligible.
+  const project = await db.project.findUnique({ where: { id: projectId } });
+
+  if (!project) {
+    return [
+      "## Reporte de Memory (auto-generado)",
+      "",
+      "> No se encontró el proyecto. Esta condición debería haberse validado antes.",
+    ].join("\n");
+  }
+
+  // Step 2: in parallel — run the 5 BD queries AND the GitHub repo-state
+  // fetch (if the project has a repo configured). fetchRepoState itself does
+  // 4 parallel API calls + a small second wave for branch tips and per-commit
+  // file lists, so it completes in ~1-3s. Running it in parallel with the BD
+  // queries hides most of that latency.
+  const [decisions, hypotheses, backlogCounts, latestSession, phaseProgress, repoState] = await Promise.all([
     db.decision.findMany({
       where: { projectId },
       orderBy: { createdAt: "desc" },
@@ -102,16 +113,11 @@ export async function buildMemoryReport(projectId: string): Promise<string> {
       where: { projectId },
       orderBy: { phase: "asc" },
     }),
+    project.repo ? fetchRepoState(project.repo) : Promise.resolve(null),
   ]);
 
   const lines: string[] = [];
   lines.push("## Reporte de Memory (auto-generado)");
-
-  if (!project) {
-    lines.push("");
-    lines.push("> No se encontró el proyecto. Esta condición debería haberse validado antes.");
-    return lines.join("\n");
-  }
 
   // 1. Project
   const users = parseUsers(project.users);
@@ -213,6 +219,34 @@ export async function buildMemoryReport(projectId: string): Promise<string> {
     if (inProgress.length > 0) {
       lines.push(`- Fases en progreso: ${inProgress.map((n) => `F${n}`).join(", ")}`);
     }
+  }
+
+  // 7. Repo state (Task 29) — read-only GitHub snapshot of the project's repo.
+  // Three cases:
+  //   - project.repo set + fetchRepoState succeeded → append the 5 repo sections.
+  //   - project.repo set + fetchRepoState returned null → graceful degradation
+  //     note (the API failed or the repo is not in the allowed list).
+  //   - project.repo NOT set → graceful note that no repo is configured.
+  // The repo IS the source of truth for code (Art. IV). Memory reads it, never
+  // modifies it (Art. III). If anything is confusing, Core elevates the
+  // ambiguity to the human (Art. IX) instead of deciding.
+  lines.push("");
+  if (project.repo) {
+    if (repoState) {
+      lines.push(formatRepoStateForReport(repoState));
+    } else {
+      lines.push("## Estado del repositorio GitHub");
+      lines.push("");
+      lines.push(
+        `(No se pudo acceder al repositorio \`${project.repo}\`. El proyecto tiene repo configurado, pero la API de GitHub falló o el repo no está en la lista de permitidos. Las secciones siguientes del reporte siguen siendo válidas.)`,
+      );
+    }
+  } else {
+    lines.push("## Estado del repositorio GitHub");
+    lines.push("");
+    lines.push(
+      "(Este proyecto no tiene repositorio GitHub configurado. Si el usuario pide trabajo git, pregúntale qué repo debe usar antes de emitir cualquier acción.)",
+    );
   }
 
   return lines.join("\n");
