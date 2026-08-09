@@ -4,6 +4,7 @@
 // Etapa 3: marketing_execute delegation.
 // Etapa 4.5: dev_execute + design_execute delegation.
 // Analytics: analytics_verify + analytics_patterns delegation added.
+// Finance: finance_execute delegation added.
 //
 // Flow:
 //   1-6. Validate → Load project → Memory Report → System prompt → LLM call → Parse.
@@ -34,10 +35,12 @@ import {
   executeDevDelegations,
   executeDesignDelegations,
   executeAnalyticsDelegations,
+  executeFinanceDelegations,
 } from "@/lib/core/execute-actions";
 import type {
   ActionTaken, ConstitutionalCheck, CoreEndpointResult,
   MarketingDeliverable, DevDeliverable, DesignDeliverable, AnalyticsDeliverable,
+  FinanceDeliverable,
   ProjectBibliaContext,
 } from "@/lib/core/types";
 
@@ -66,6 +69,7 @@ function buildDocumentsUpdated(actionsTaken: ActionTaken[]): { doc: string; chan
     if (a.type === "design_execute") return a.hypothesisId ? [{ doc: "DesignAsset", change: `${a.title} (HIP ${a.hypothesisId})` }] : [{ doc: "DesignAsset", change: `Delegación ${a.capability} fallida` }];
     if (a.type === "analytics_verify") return a.verdict ? [{ doc: "Hypothesis", change: `HIP ${a.hypothesisId} → ${a.verdict}` }] : [{ doc: "Hypothesis", change: "Verificación fallida" }];
     if (a.type === "analytics_patterns") return [{ doc: "AnalyticsReport", change: `${a.title} (${a.hypothesesAnalyzed} hipótesis)` }];
+    if (a.type === "finance_execute") return a.hypothesisId ? [{ doc: "FinanceAsset", change: `${a.title} (HIP ${a.hypothesisId})` }] : [{ doc: "FinanceAsset", change: `Delegación ${a.capability} fallida` }];
     return [];
   });
 }
@@ -76,7 +80,7 @@ function decisionsFromActions(actionsTaken: ActionTaken[]): string[] {
 
 // ─── Integration prompt ──────────────────────────────────────────────────────
 
-const INTEGRATION_SYSTEM_PROMPT = `Eres LOGAN Core. Recibiste el trabajo de uno o varios especialistas (Marketing, Dev, Design, Analytics) y debes integrarlo en una respuesta coherente al usuario, en tu única voz LOGAN. NO inventes. Cita el entregable cuando sea relevante. Art. IX (arquitecto colaborador) y Art. VII (señala riesgos). Responde en español, cálida y directamente. NO uses JSON — texto natural.`;
+const INTEGRATION_SYSTEM_PROMPT = `Eres LOGAN Core. Recibiste el trabajo de uno o varios especialistas (Marketing, Dev, Design, Analytics, Finance) y debes integrarlo en una respuesta coherente al usuario, en tu única voz LOGAN. NO inventes. Cita el entregable cuando sea relevante. Art. IX (arquitecto colaborador) y Art. VII (señala riesgos). Responde en español, cálida y directamente. NO uses JSON — texto natural.`;
 
 function renderDeliverable(i: number, role: string, label: string, capability: string, title: string, content: string, hyp: { context: string; hypothesis: string; prediction: string }): string[] {
   return ["", `### Entregable ${i + 1} [${role}]: ${label} (${capability})`, "", `**Título:** ${title}`, "", "**Contenido:**", "", content, "", "**Hipótesis (DEC-LOGAN-004):**", `- Contexto: ${hyp.context}`, `- Hipótesis: ${hyp.hypothesis}`, `- Predicción: ${hyp.prediction}`];
@@ -86,6 +90,7 @@ function buildIntegrationUserPrompt(
   msg: string,
   marketing: MarketingDeliverable[], dev: DevDeliverable[],
   design: DesignDeliverable[], analytics: AnalyticsDeliverable[],
+  finance: FinanceDeliverable[],
 ): string {
   const lines: string[] = ["## Mensaje original del usuario", "", msg, "", "## Entregables de los especialistas"];
   let i = 0;
@@ -96,7 +101,8 @@ function buildIntegrationUserPrompt(
     lines.push("", `### Entregable ${i++ + 1} [Analytics]: ${d.kind === "verify" ? "Verificación" : "Análisis de patrones"}`, "", `**Título:** ${d.title}`, "", "**Reporte:**", "", d.content);
     if (d.topLearnings?.length) lines.push("", "**Aprendizajes clave:**", ...d.topLearnings.map((l) => `- ${l}`));
   }
-  lines.push("", "## Tu tarea", "", "Integra todos los entregables en una sola voz LOGAN, cálida, clara y específica al proyecto. Para los entregables de Analytics, destaca el veredicto y el aprendizaje. NO repitas el contenido crudo — sintetiza en lenguaje natural.");
+  for (const d of finance) lines.push(...renderDeliverable(i++, "Finance", d.capabilityLabel, d.capability, d.title, d.content, d.hypothesis));
+  lines.push("", "## Tu tarea", "", "Integra todos los entregables en una sola voz LOGAN, cálida, clara y específica al proyecto. Para Analytics destaca el veredicto y aprendizaje; para Finance destaca los números y la recomendación. NO repitas el contenido crudo — sintetiza en lenguaje natural.");
   return lines.join("\n");
 }
 
@@ -143,34 +149,37 @@ export async function POST(req: NextRequest) {
   try { nonSpecialistActions = await executeActions(projectId, parsed.actions, constitutionalForPersistence); }
   catch (e) { console.error("[core] executeActions:", (e as Error).message); }
 
-  // Execute ALL specialist delegations in parallel (now includes Analytics).
+  // Execute ALL specialist delegations in parallel (Marketing, Dev, Design, Analytics, Finance).
   let marketingActionsTaken: ActionTaken[] = [], marketingDeliverables: MarketingDeliverable[] = [];
   let devActionsTaken: ActionTaken[] = [], devDeliverables: DevDeliverable[] = [];
   let designActionsTaken: ActionTaken[] = [], designDeliverables: DesignDeliverable[] = [];
   let analyticsActionsTaken: ActionTaken[] = [], analyticsDeliverables: AnalyticsDeliverable[] = [];
+  let financeActionsTaken: ActionTaken[] = [], financeDeliverables: FinanceDeliverable[] = [];
 
   try {
-    const [mkt, dev, des, ana] = await Promise.all([
+    const [mkt, dev, des, ana, fin] = await Promise.all([
       executeMarketingDelegations(projectId, parsed.actions),
       executeDevDelegations(projectId, parsed.actions),
       executeDesignDelegations(projectId, parsed.actions),
       executeAnalyticsDelegations(projectId, parsed.actions),
+      executeFinanceDelegations(projectId, parsed.actions),
     ]);
     marketingActionsTaken = mkt.actionsTaken; marketingDeliverables = mkt.deliverables;
     devActionsTaken = dev.actionsTaken; devDeliverables = dev.deliverables;
     designActionsTaken = des.actionsTaken; designDeliverables = des.deliverables;
     analyticsActionsTaken = ana.actionsTaken; analyticsDeliverables = ana.deliverables;
+    financeActionsTaken = fin.actionsTaken; financeDeliverables = fin.deliverables;
   } catch (e) { console.error("[core] Delegations:", (e as Error).message); }
 
-  const actionsTaken: ActionTaken[] = [...nonSpecialistActions, ...marketingActionsTaken, ...devActionsTaken, ...designActionsTaken, ...analyticsActionsTaken];
+  const actionsTaken: ActionTaken[] = [...nonSpecialistActions, ...marketingActionsTaken, ...devActionsTaken, ...designActionsTaken, ...analyticsActionsTaken, ...financeActionsTaken];
 
-  const allDeliverables = [...marketingDeliverables, ...devDeliverables, ...designDeliverables, ...analyticsDeliverables];
+  const allDeliverables = [...marketingDeliverables, ...devDeliverables, ...designDeliverables, ...analyticsDeliverables, ...financeDeliverables];
   let finalResponse = parsed.response;
 
   if (allDeliverables.length > 0) {
     try {
       const zai = await ZAI.create();
-      const integrationPrompt = buildIntegrationUserPrompt(message, marketingDeliverables, devDeliverables, designDeliverables, analyticsDeliverables);
+      const integrationPrompt = buildIntegrationUserPrompt(message, marketingDeliverables, devDeliverables, designDeliverables, analyticsDeliverables, financeDeliverables);
       const completion = await zai.chat.completions.create({ messages: [{ role: "assistant", content: INTEGRATION_SYSTEM_PROMPT }, { role: "user", content: integrationPrompt }], thinking: { type: "disabled" } });
       const integrated = completion.choices[0]?.message?.content ?? "";
       if (integrated?.trim()) finalResponse = integrated.trim();
@@ -213,3 +222,4 @@ export async function POST(req: NextRequest) {
     sessionId,
   } as CoreEndpointResult);
 }
+
