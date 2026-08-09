@@ -1,6 +1,6 @@
 # ECOSYSTEM.md
 
-**Versión:** 0.4 · **Estado:** En construcción · **Fecha:** 2026-08-08
+**Versión:** 0.5 · **Estado:** En construcción · **Fecha:** 2026-08-08
 **Propósito:** La memoria institucional de LOGAN.
 
 ## 1. Productos
@@ -20,8 +20,8 @@
 | LOGAN Design | especialista | activo | 2026-08-08 |
 | LOGAN Analytics | especialista | activo | 2026-08-08 |
 | LOGAN Finance | especialista | activo | 2026-08-08 |
-| Legal | especialista | planificado | — |
-| Support | especialista | planificado | — |
+| LOGAN Legal | especialista | activo | 2026-08-08 |
+| LOGAN Support | especialista | activo | 2026-08-08 |
 
 ## 3. Dominios
 | Dominio | Estado | Propósito | Proveedor |
@@ -47,10 +47,17 @@
 - Prisma schema: modelo FinanceAsset añadido.
 - LOGAN tiene ahora **7 agentes activos**.
 
+### 2026-08-08 — Legal + Support activos. LOGAN OS completa 9/9 roles v0.5.
+- `POST /api/legal/execute` con 8 capabilities (draft_terms, draft_privacy_policy, review_contract, compliance_check, draft_contract, regulatory_risk_analysis, data_protection_audit, legal_disclaimer).
+- `POST /api/support/execute` con 8 capabilities (answer_faq, draft_help_article, categorize_issue, propose_solution, escalation_summary, satisfaction_analysis, improvement_proposal, onboarding_guide).
+- Core delega a Legal con `legal_execute` y a Support con `support_execute` (en paralelo con Marketing, Dev, Design, Analytics, Finance).
+- LegalSection y SupportSection UI completas.
+- Prisma schema: modelos LegalAsset + SupportAsset añadidos.
+- Bug fix crítico: parser de Core actualizado para reconocer todos los tipos de delegación (dev_execute, design_execute, analytics_verify, analytics_patterns, finance_execute, legal_execute, support_execute) — antes solo reconocía marketing_execute y los demás se descartaban silenciosamente.
+- LOGAN tiene ahora **9 agentes activos** — mapa de roles del ecosistema completo.
+
 ### Pendiente
 - Deploy en Vercel Pro (configurar DATABASE_URL Postgres + prisma migrate deploy).
-- Legal funcional.
-- Support funcional.
 - Etapa 5: Hércules Bro.
 - Etapa 6: LOGAN corporativo en logan.mx.
 

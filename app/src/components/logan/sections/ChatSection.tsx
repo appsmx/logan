@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useProject } from "@/lib/hooks";
 import { toast } from "sonner";
-import { CONSTITUTION_ARTICLES, MARKETING_CAPABILITIES } from "@/lib/logan-os-data";
+import { CONSTITUTION_ARTICLES, MARKETING_CAPABILITIES, LEGAL_CAPABILITIES, SUPPORT_CAPABILITIES } from "@/lib/logan-os-data";
 
 // A single turn with LOGAN Core.
 type ActionTaken = {
@@ -19,13 +19,27 @@ type ActionTaken = {
     | "register_decision"
     | "register_hypothesis"
     | "marketing_proposal"
-    | "marketing_execute";
+    | "marketing_execute"
+    | "dev_execute"
+    | "design_execute"
+    | "analytics_verify"
+    | "analytics_patterns"
+    | "finance_execute"
+    | "legal_execute"
+    | "support_execute";
   decId?: string;
   id?: string;
   hypothesisId?: string;
   marketingAssetId?: string;
+  devAssetId?: string;
+  designAssetId?: string;
+  financeAssetId?: string;
+  legalAssetId?: string;
+  supportAssetId?: string;
   capability?: string;
   title?: string;
+  verdict?: string;
+  hypothesesAnalyzed?: number;
 };
 
 type CoreResponse = {
@@ -341,7 +355,15 @@ function actionLabel(a: ActionTaken): string {
     const cap = MARKETING_CAPABILITIES.find((c) => c.key === a.capability);
     return cap?.label || a.title || "Marketing";
   }
-  return a.type;
+  if (a.type === "legal_execute") {
+    const cap = LEGAL_CAPABILITIES.find((c) => c.key === a.capability);
+    return cap?.label || a.title || "Legal";
+  }
+  if (a.type === "support_execute") {
+    const cap = SUPPORT_CAPABILITIES.find((c) => c.key === a.capability);
+    return cap?.label || a.title || "Support";
+  }
+  return a.title || a.type;
 }
 
 const SUGGESTIONS = [

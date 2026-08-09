@@ -172,3 +172,25 @@ export type FinanceAsset = {
   createdAt: string;
   hypothesis?: Hypothesis | null;
 };
+
+export type LegalAsset = {
+  id: string;
+  projectId: string;
+  type: string;
+  title: string;
+  content: string;
+  hypothesisId: string | null;
+  createdAt: string;
+  hypothesis?: Hypothesis | null;
+};
+
+export type SupportAsset = {
+  id: string;
+  projectId: string;
+  type: string;
+  title: string;
+  content: string;
+  hypothesisId: string | null;
+  createdAt: string;
+  hypothesis?: Hypothesis | null;
+};

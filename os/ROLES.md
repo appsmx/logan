@@ -1,6 +1,6 @@
 # ROLES.md
 
-**Versión:** 0.4 · **Estado:** En construcción · **Fecha:** 2026-08-08
+**Versión:** 0.5 · **Estado:** En construcción · **Fecha:** 2026-08-08
 **Propósito:** El registro oficial de todos los agentes del ecosistema LOGAN OS.
 
 ## Formato de entrada
@@ -51,12 +51,14 @@ Decisiones de dinero. Analiza viabilidad, proyecta ingresos y costos, define mod
 **Never:** compromete dinero real (sus entregables son propuestas), inventa datos financieros, decide la visión, opera sin mandato.
 **role_doc:** `roles/finance/ROLE.md` · **endpoint:** `POST /api/finance/execute`
 
-### Legal (especialista, planificado)
-Cumplimiento y riesgo legal.
-- Términos y condiciones. Privacidad de datos. Contratos. Riesgo regulatorio.
-**role_doc:** `roles/legal/ROLE.md`
+### LOGAN Legal (especialista, activo)
+Cumplimiento y riesgo legal. Términos, privacidad LFPDPPP México, contratos, riesgo regulatorio.
+- Redactar términos y condiciones. Avisos de privacidad LFPDPPP México (NOM-024, INAI). Revisión y redacción de contratos (cliente, proveedor, empleado). Verificación de cumplimiento normativo. Análisis de riesgo regulatorio. Auditoría de protección de datos. Disclaimers legales para contenido/campañas.
+**Never:** constituye asesoría legal vinculante (sus entregables son propuestas — valida con abogado colegiado), inventa cláusulas sin base normativa, decide la visión, opera sin mandato.
+**role_doc:** `roles/legal/ROLE.md` · **endpoint:** `POST /api/legal/execute`
 
-### Support (especialista, planificado)
-Atención al usuario.
-- Gestionar consultas. Documentar problemas recurrentes. Proponer mejoras desde el frente.
-**role_doc:** `roles/support/ROLE.md`
+### LOGAN Support (especialista, activo)
+Atención al cliente. FAQs, artículos de ayuda, escalados, satisfacción, mejoras desde el frente.
+- Responder FAQs con base en el producto. Redactar artículos de ayuda/base de conocimiento. Categorizar problemas reportados (tipo, severidad, urgencia). Proponer soluciones escalables a casos recurrentes. Resumir escalados a Dev/Core. Analizar satisfacción (NPS/feedback). Proponer mejoras de producto desde el frente. Guías de onboarding para nuevos clientes.
+**Never:** ejecuta cambios de producto por su cuenta (las mejoras son propuestas), decide la visión, opera sin mandato, sustituye el criterio humano.
+**role_doc:** `roles/support/ROLE.md` · **endpoint:** `POST /api/support/execute`

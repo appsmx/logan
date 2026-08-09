@@ -6,10 +6,11 @@
 // Analytics: analytics_verify + analytics_patterns delegation added.
 
 import { db } from "@/lib/db";
-import { MARKETING_CAPABILITIES, DEV_CAPABILITIES, DESIGN_CAPABILITIES, FINANCE_CAPABILITIES } from "@/lib/logan-os-data";
+import { MARKETING_CAPABILITIES, DEV_CAPABILITIES, DESIGN_CAPABILITIES, FINANCE_CAPABILITIES, LEGAL_CAPABILITIES, SUPPORT_CAPABILITIES } from "@/lib/logan-os-data";
 import type {
   ActionTaken, CoreAction, ConstitutionalCheck,
   MarketingDeliverable, DevDeliverable, DesignDeliverable, AnalyticsDeliverable, FinanceDeliverable,
+  LegalDeliverable, SupportDeliverable,
 } from "@/lib/core/types";
 
 async function nextDecId(projectId: string): Promise<string> {
@@ -22,6 +23,8 @@ function marketingCapabilityLabel(k: string) { return MARKETING_CAPABILITIES.fin
 function devCapabilityLabel(k: string) { return DEV_CAPABILITIES.find((c) => c.key === k)?.label ?? k; }
 function designCapabilityLabel(k: string) { return DESIGN_CAPABILITIES.find((c) => c.key === k)?.label ?? k; }
 function financeCapabilityLabel(k: string) { return FINANCE_CAPABILITIES.find((c) => c.key === k)?.label ?? k; }
+function legalCapabilityLabel(k: string) { return LEGAL_CAPABILITIES.find((c) => c.key === k)?.label ?? k; }
+function supportCapabilityLabel(k: string) { return SUPPORT_CAPABILITIES.find((c) => c.key === k)?.label ?? k; }
 
 // ─── Specialist callers ──────────────────────────────────────────────────────
 
@@ -103,6 +106,30 @@ async function callFinanceEndpoint(projectId: string, capability: string, brief:
   } catch (e) { console.error("[core] finance fetch falló:", (e as Error).message); return null; }
 }
 
+async function callLegalEndpoint(projectId: string, capability: string, brief: string) {
+  try {
+    const res = await fetch("http://localhost:3000/api/legal/execute", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId, capability, brief }),
+    });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); console.error("[core] legal_execute:", res.status, (e as {error?:string}).error||""); return null; }
+    const d = await res.json() as { legalAssetId: string; hypothesisId: string; title: string; content: string; hypothesis: { context: string; hypothesis: string; prediction: string } };
+    return { legalAssetId: d.legalAssetId, hypothesisId: d.hypothesisId, title: d.title, content: d.content, hypothesis: { context: d.hypothesis?.context??"", hypothesis: d.hypothesis?.hypothesis??"", prediction: d.hypothesis?.prediction??"" } };
+  } catch (e) { console.error("[core] legal fetch falló:", (e as Error).message); return null; }
+}
+
+async function callSupportEndpoint(projectId: string, capability: string, brief: string) {
+  try {
+    const res = await fetch("http://localhost:3000/api/support/execute", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId, capability, brief }),
+    });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); console.error("[core] support_execute:", res.status, (e as {error?:string}).error||""); return null; }
+    const d = await res.json() as { supportAssetId: string; hypothesisId: string; title: string; content: string; hypothesis: { context: string; hypothesis: string; prediction: string } };
+    return { supportAssetId: d.supportAssetId, hypothesisId: d.hypothesisId, title: d.title, content: d.content, hypothesis: { context: d.hypothesis?.context??"", hypothesis: d.hypothesis?.hypothesis??"", prediction: d.hypothesis?.prediction??"" } };
+  } catch (e) { console.error("[core] support fetch falló:", (e as Error).message); return null; }
+}
+
 async function executeOne(
   projectId: string, action: CoreAction, constitutional?: ConstitutionalCheck | null,
 ): Promise<ActionTaken | null> {
@@ -145,7 +172,7 @@ async function executeOne(
 export async function executeActions(projectId: string, actions: CoreAction[], constitutional?: ConstitutionalCheck | null): Promise<ActionTaken[]> {
   const results: ActionTaken[] = [];
   for (const action of actions) {
-    if (["marketing_execute","dev_execute","design_execute","analytics_verify","analytics_patterns","finance_execute"].includes(action.type)) continue;
+    if (["marketing_execute","dev_execute","design_execute","analytics_verify","analytics_patterns","finance_execute","legal_execute","support_execute"].includes(action.type)) continue;
     const r = await executeOne(projectId, action, constitutional);
     if (r) results.push(r);
   }
@@ -224,6 +251,30 @@ export async function executeFinanceDelegations(projectId: string, actions: Core
     if (!result) { actionsTaken.push({ type: "finance_execute", capability: action.capability, financeAssetId: "", hypothesisId: "", title: "(delegación fallida)" }); continue; }
     actionsTaken.push({ type: "finance_execute", capability: action.capability, financeAssetId: result.financeAssetId, hypothesisId: result.hypothesisId, title: result.title });
     deliverables.push({ capability: action.capability, capabilityLabel: financeCapabilityLabel(action.capability), title: result.title, content: result.content, hypothesisId: result.hypothesisId, financeAssetId: result.financeAssetId, hypothesis: result.hypothesis });
+  }
+  return { actionsTaken, deliverables };
+}
+
+export async function executeLegalDelegations(projectId: string, actions: CoreAction[]): Promise<{ actionsTaken: ActionTaken[]; deliverables: LegalDeliverable[] }> {
+  const actionsTaken: ActionTaken[] = []; const deliverables: LegalDeliverable[] = [];
+  const filtered = actions.filter((a): a is Extract<CoreAction,{type:"legal_execute"}> => a.type === "legal_execute");
+  const results = await Promise.all(filtered.map(async (a) => ({ action: a, result: await callLegalEndpoint(projectId, a.capability, a.brief) })));
+  for (const { action, result } of results) {
+    if (!result) { actionsTaken.push({ type: "legal_execute", capability: action.capability, legalAssetId: "", hypothesisId: "", title: "(delegación fallida)" }); continue; }
+    actionsTaken.push({ type: "legal_execute", capability: action.capability, legalAssetId: result.legalAssetId, hypothesisId: result.hypothesisId, title: result.title });
+    deliverables.push({ capability: action.capability, capabilityLabel: legalCapabilityLabel(action.capability), title: result.title, content: result.content, hypothesisId: result.hypothesisId, legalAssetId: result.legalAssetId, hypothesis: result.hypothesis });
+  }
+  return { actionsTaken, deliverables };
+}
+
+export async function executeSupportDelegations(projectId: string, actions: CoreAction[]): Promise<{ actionsTaken: ActionTaken[]; deliverables: SupportDeliverable[] }> {
+  const actionsTaken: ActionTaken[] = []; const deliverables: SupportDeliverable[] = [];
+  const filtered = actions.filter((a): a is Extract<CoreAction,{type:"support_execute"}> => a.type === "support_execute");
+  const results = await Promise.all(filtered.map(async (a) => ({ action: a, result: await callSupportEndpoint(projectId, a.capability, a.brief) })));
+  for (const { action, result } of results) {
+    if (!result) { actionsTaken.push({ type: "support_execute", capability: action.capability, supportAssetId: "", hypothesisId: "", title: "(delegación fallida)" }); continue; }
+    actionsTaken.push({ type: "support_execute", capability: action.capability, supportAssetId: result.supportAssetId, hypothesisId: result.hypothesisId, title: result.title });
+    deliverables.push({ capability: action.capability, capabilityLabel: supportCapabilityLabel(action.capability), title: result.title, content: result.content, hypothesisId: result.hypothesisId, supportAssetId: result.supportAssetId, hypothesis: result.hypothesis });
   }
   return { actionsTaken, deliverables };
 }

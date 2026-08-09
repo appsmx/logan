@@ -73,6 +73,18 @@ export type CoreAction =
       type: "finance_execute";
       capability: string; // one of FINANCE_CAPABILITIES keys
       brief: string;
+    }
+  | {
+      // Legal — delegate legal analysis to the Legal specialist.
+      type: "legal_execute";
+      capability: string; // one of LEGAL_CAPABILITIES keys
+      brief: string;
+    }
+  | {
+      // Support — delegate customer support analysis to the Support specialist.
+      type: "support_execute";
+      capability: string; // one of SUPPORT_CAPABILITIES keys
+      brief: string;
     };
 
 /** Constitutional self-check that Core includes in its response. */
@@ -123,6 +135,20 @@ export type ActionTaken =
       type: "finance_execute";
       capability: string;
       financeAssetId: string;
+      hypothesisId: string;
+      title: string;
+    }
+  | {
+      type: "legal_execute";
+      capability: string;
+      legalAssetId: string;
+      hypothesisId: string;
+      title: string;
+    }
+  | {
+      type: "support_execute";
+      capability: string;
+      supportAssetId: string;
       hypothesisId: string;
       title: string;
     };
@@ -184,5 +210,27 @@ export type FinanceDeliverable = {
   content: string;
   hypothesisId: string;
   financeAssetId: string;
+  hypothesis: { context: string; hypothesis: string; prediction: string };
+};
+
+/** A Legal specialist deliverable for the integration LLM call. */
+export type LegalDeliverable = {
+  capability: string;
+  capabilityLabel: string;
+  title: string;
+  content: string;
+  hypothesisId: string;
+  legalAssetId: string;
+  hypothesis: { context: string; hypothesis: string; prediction: string };
+};
+
+/** A Support specialist deliverable for the integration LLM call. */
+export type SupportDeliverable = {
+  capability: string;
+  capabilityLabel: string;
+  title: string;
+  content: string;
+  hypothesisId: string;
+  supportAssetId: string;
   hypothesis: { context: string; hypothesis: string; prediction: string };
 };

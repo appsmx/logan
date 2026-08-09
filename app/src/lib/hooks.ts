@@ -22,6 +22,8 @@ import type {
   DevAsset,
   DesignAsset,
   FinanceAsset,
+  LegalAsset,
+  SupportAsset,
   HypothesisInput,
 } from "@/lib/logan-types";
 
@@ -41,6 +43,8 @@ const qk = {
   dev: (pid: string) => ["dev", pid] as const,
   design: (pid: string) => ["design", pid] as const,
   finance: (pid: string) => ["finance", pid] as const,
+  legal: (pid: string) => ["legal", pid] as const,
+  support: (pid: string) => ["support", pid] as const,
 };
 
 // ---------- Projects ----------
@@ -530,6 +534,72 @@ export function useDeleteFinance(pid: string) {
     mutationFn: (id: string) => api(`/api/finance/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.finance(pid) });
+      qc.invalidateQueries({ queryKey: qk.hypotheses(pid) });
+    },
+  });
+}
+
+// ---------- Legal ----------
+export function useLegal(pid: string | null) {
+  return useQuery<LegalAsset[]>({
+    queryKey: pid ? qk.legal(pid) : ["legal", "none"],
+    queryFn: () => (pid ? api<LegalAsset[]>(`/api/projects/${pid}/legal`) : Promise.resolve([])),
+    enabled: !!pid,
+    placeholderData: [],
+  } as UseQueryOptions<LegalAsset[]>);
+}
+
+export function useCreateLegal(pid: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { type: string; title: string; content: string; hypothesis?: HypothesisInput }) =>
+      api<LegalAsset>(`/api/projects/${pid}/legal`, { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.legal(pid) });
+      qc.invalidateQueries({ queryKey: qk.hypotheses(pid) });
+    },
+  });
+}
+
+export function useDeleteLegal(pid: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/legal/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.legal(pid) });
+      qc.invalidateQueries({ queryKey: qk.hypotheses(pid) });
+    },
+  });
+}
+
+// ---------- Support ----------
+export function useSupport(pid: string | null) {
+  return useQuery<SupportAsset[]>({
+    queryKey: pid ? qk.support(pid) : ["support", "none"],
+    queryFn: () => (pid ? api<SupportAsset[]>(`/api/projects/${pid}/support`) : Promise.resolve([])),
+    enabled: !!pid,
+    placeholderData: [],
+  } as UseQueryOptions<SupportAsset[]>);
+}
+
+export function useCreateSupport(pid: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { type: string; title: string; content: string; hypothesis?: HypothesisInput }) =>
+      api<SupportAsset>(`/api/projects/${pid}/support`, { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.support(pid) });
+      qc.invalidateQueries({ queryKey: qk.hypotheses(pid) });
+    },
+  });
+}
+
+export function useDeleteSupport(pid: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/support/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.support(pid) });
       qc.invalidateQueries({ queryKey: qk.hypotheses(pid) });
     },
   });

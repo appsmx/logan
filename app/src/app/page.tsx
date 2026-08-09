@@ -21,6 +21,8 @@ import { DevSection } from "@/components/logan/sections/DevSection";
 import { DesignSection } from "@/components/logan/sections/DesignSection";
 import { AnalyticsSection } from "@/components/logan/sections/AnalyticsSection";
 import { FinanceSection } from "@/components/logan/sections/FinanceSection";
+import { LegalSection } from "@/components/logan/sections/LegalSection";
+import { SupportSection } from "@/components/logan/sections/SupportSection";
 import { DecisionsSection } from "@/components/logan/sections/DecisionsSection";
 import { DiscoveriesSection } from "@/components/logan/sections/DiscoveriesSection";
 import { AuditSection } from "@/components/logan/sections/AuditSection";
@@ -42,6 +44,8 @@ const SECTIONS: Record<string, React.ComponentType> = {
   design: DesignSection,
   analytics: AnalyticsSection,
   finance: FinanceSection,
+  legal: LegalSection,
+  support: SupportSection,
   decisiones: DecisionsSection,
   descubrimientos: DiscoveriesSection,
   auditoria: AuditSection,

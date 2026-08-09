@@ -151,6 +151,31 @@ function asActions(value: unknown): CoreAction[] {
         capability: asString(a.capability, ""),
         brief: asString(a.brief),
       });
+    } else if (type === "dev_execute") {
+      out.push({ type: "dev_execute", capability: asString(a.capability, ""), brief: asString(a.brief) });
+    } else if (type === "design_execute") {
+      out.push({ type: "design_execute", capability: asString(a.capability, ""), brief: asString(a.brief) });
+    } else if (type === "analytics_verify") {
+      out.push({
+        type: "analytics_verify",
+        hypothesisId: asString(a.hypothesisId, ""),
+        outcome: asString(a.outcome, ""),
+        evidence: asString(a.evidence, ""),
+        brief: asString(a.brief, "") || undefined,
+      });
+    } else if (type === "analytics_patterns") {
+      out.push({
+        type: "analytics_patterns",
+        roleFilter: typeof a.roleFilter === "string" ? a.roleFilter : undefined,
+        statusFilter: typeof a.statusFilter === "string" ? a.statusFilter : undefined,
+        brief: asString(a.brief, "") || undefined,
+      });
+    } else if (type === "finance_execute") {
+      out.push({ type: "finance_execute", capability: asString(a.capability, ""), brief: asString(a.brief) });
+    } else if (type === "legal_execute") {
+      out.push({ type: "legal_execute", capability: asString(a.capability, ""), brief: asString(a.brief) });
+    } else if (type === "support_execute") {
+      out.push({ type: "support_execute", capability: asString(a.capability, ""), brief: asString(a.brief) });
     }
     // Unknown action types are silently dropped (Art. III — simplicity).
   }

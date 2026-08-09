@@ -368,14 +368,14 @@ export const ROLES: Role[] = [
     key: "legal",
     name: "Legal",
     kind: "especialista",
-    status: "planificado",
-    color: "muted",
+    status: "activo",
+    color: "primary",
     tagline: "Cumplimiento y riesgo legal.",
     responsibilities: [
       "Términos y condiciones",
-      "Privacidad de datos",
-      "Contratos",
-      "Riesgo regulatorio",
+      "Avisos de privacidad (LFPDPPP México)",
+      "Contratos (cliente, proveedor, empleado)",
+      "Riesgo regulatorio y cumplimiento",
     ],
     icon: "Scale",
   },
@@ -383,13 +383,14 @@ export const ROLES: Role[] = [
     key: "support",
     name: "Support",
     kind: "especialista",
-    status: "planificado",
-    color: "muted",
+    status: "activo",
+    color: "warning",
     tagline: "Atención al usuario.",
     responsibilities: [
-      "Gestionar consultas",
+      "Gestionar consultas y FAQ",
       "Documentar problemas recurrentes",
       "Proponer mejoras de producto desde el frente",
+      "Onboarding y guía de ayuda",
     ],
     icon: "LifeBuoy",
   },
@@ -612,6 +613,8 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
   { key: "design", label: "Design", icon: "Palette", group: "PROYECTO", requiresProject: true },
   { key: "analytics", label: "Analytics", icon: "BarChart2", group: "PROYECTO", requiresProject: true },
   { key: "finance", label: "Finance", icon: "Coins", group: "PROYECTO", requiresProject: true },
+  { key: "legal", label: "Legal", icon: "Scale", group: "PROYECTO", requiresProject: true },
+  { key: "support", label: "Support", icon: "LifeBuoy", group: "PROYECTO", requiresProject: true },
 ];
 
 // LML reference (kept for a small reference card).
@@ -749,4 +752,68 @@ export const FINANCE_ASSET_TYPES: Record<string, { label: string; color: string 
   unit_economics:       { label: "Métricas unitarias",    color: "primary"     },
   investment_analysis:  { label: "Análisis de inversión", color: "destructive" },
   financial_report:     { label: "Reporte financiero",    color: "muted"       },
+};
+
+// ============================================================
+// LEGAL CAPABILITIES
+// ============================================================
+export type LegalCapability = {
+  key: string;
+  label: string;
+  description: string;
+  producesAssetType: string;
+};
+
+export const LEGAL_CAPABILITIES: LegalCapability[] = [
+  { key: "draft_terms",            label: "Redactar términos y condiciones",  description: "T&C completos para un producto digital (uso, aceptación, obligaciones, limitaciones).",   producesAssetType: "terms"             },
+  { key: "draft_privacy_policy",   label: "Redactar aviso de privacidad",      description: "Aviso de privacidad LFPDPPP México: datos recopilados, finalidades, ARCO, transferencias.", producesAssetType: "privacy_policy"    },
+  { key: "review_contract",        label: "Revisar contrato",                  description: "Revisar un contrato existente y señalar riesgos, cláusulas abusivas y vacíos.",            producesAssetType: "contract_review"    },
+  { key: "compliance_check",       label: "Verificar cumplimiento normativo",  description: "Auditar si un producto cumple con la normativa aplicable (LFPDPPP, CFPC, NOM-024, etc.).", producesAssetType: "compliance_report"  },
+  { key: "draft_contract",         label: "Redactar contrato",                  description: "Contrato (cliente, proveedor o empleado) con cláusulas, obligaciones y jurisdicción.",      producesAssetType: "contract"           },
+  { key: "regulatory_risk_analysis", label: "Analizar riesgo regulatorio",     description: "Mapear exposición regulatoria de un producto/servicio y proponer mitigaciones.",            producesAssetType: "risk_analysis"      },
+  { key: "data_protection_audit",  label: "Auditar protección de datos",       description: "Auditar el manejo de datos personales: ciclo de vida, consentimiento, seguridad, ARCO.",   producesAssetType: "audit_report"       },
+  { key: "legal_disclaimer",       label: "Redactar disclaimer legal",         description: "Disclaimer para contenido, campañas o comunicaciones que requieren limitación de responsabilidad.", producesAssetType: "disclaimer"  },
+];
+
+export const LEGAL_ASSET_TYPES: Record<string, { label: string; color: string }> = {
+  terms:              { label: "Términos y condiciones", color: "primary"     },
+  privacy_policy:     { label: "Aviso de privacidad",    color: "primary"     },
+  contract_review:    { label: "Revisión de contrato",   color: "warning"     },
+  compliance_report:  { label: "Reporte de cumplimiento", color: "muted"      },
+  contract:           { label: "Contrato",               color: "primary"     },
+  risk_analysis:      { label: "Análisis de riesgo",     color: "destructive" },
+  audit_report:       { label: "Auditoría",              color: "warning"     },
+  disclaimer:         { label: "Disclaimer",            color: "muted"       },
+};
+
+// ============================================================
+// SUPPORT CAPABILITIES
+// ============================================================
+export type SupportCapability = {
+  key: string;
+  label: string;
+  description: string;
+  producesAssetType: string;
+};
+
+export const SUPPORT_CAPABILITIES: SupportCapability[] = [
+  { key: "answer_faq",            label: "Responder FAQ",                    description: "Responder una pregunta frecuente con base en el producto y su contexto.",       producesAssetType: "faq"                   },
+  { key: "draft_help_article",    label: "Redactar artículo de ayuda",       description: "Artículo de base de conocimiento con pasos accionables y objeciones.",            producesAssetType: "help_article"          },
+  { key: "categorize_issue",      label: "Categorizar problema reportado",  description: "Clasificar un problema reportado: tipo, severidad, urgencia, área responsable.", producesAssetType: "issue_category"        },
+  { key: "propose_solution",      label: "Proponer solución recurrente",    description: "Solución escalable a un problema que se repite entre clientes.",                producesAssetType: "solution"              },
+  { key: "escalation_summary",    label: "Resumir caso para escalar",        description: "Resumen ejecutivo de un caso para escalar a Dev o Core con contexto accionable.", producesAssetType: "escalation"           },
+  { key: "satisfaction_analysis", label: "Analizar satisfacción",            description: "Analizar feedback/NPS de clientes y proponer acciones de mejora.",             producesAssetType: "satisfaction_report"   },
+  { key: "improvement_proposal", label: "Proponer mejora de producto",      description: "Propuesta de mejora de producto surgida del frente de soporte.",                 producesAssetType: "improvement_proposal"  },
+  { key: "onboarding_guide",      label: "Redactar guía de onboarding",      description: "Guía de onboarding para nuevos clientes con primeros pasos clave.",            producesAssetType: "onboarding_guide"      },
+];
+
+export const SUPPORT_ASSET_TYPES: Record<string, { label: string; color: string }> = {
+  faq:                   { label: "FAQ",                       color: "muted"       },
+  help_article:          { label: "Artículo de ayuda",         color: "primary"     },
+  issue_category:        { label: "Categoría de problema",      color: "warning"     },
+  solution:              { label: "Solución",                   color: "success"     },
+  escalation:            { label: "Escalación",                 color: "destructive" },
+  satisfaction_report:   { label: "Reporte de satisfacción",    color: "warning"     },
+  improvement_proposal:  { label: "Propuesta de mejora",        color: "success"     },
+  onboarding_guide:      { label: "Guía de onboarding",          color: "primary"     },
 };
