@@ -139,3 +139,25 @@ export type HypothesisInput = {
   hypothesis: string;
   prediction: string;
 };
+
+export type DevAsset = {
+  id: string;
+  projectId: string;
+  type: string;
+  title: string;
+  content: string;
+  hypothesisId: string | null;
+  createdAt: string;
+  hypothesis?: Hypothesis | null;
+};
+
+export type DesignAsset = {
+  id: string;
+  projectId: string;
+  type: string;
+  title: string;
+  content: string;
+  hypothesisId: string | null;
+  createdAt: string;
+  hypothesis?: Hypothesis | null;
+};
