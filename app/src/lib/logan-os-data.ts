@@ -353,7 +353,7 @@ export const ROLES: Role[] = [
     key: "finance",
     name: "Finance",
     kind: "especialista",
-    status: "planificado",
+    status: "activo",
     color: "warning",
     tagline: "Decisiones de dinero.",
     responsibilities: [
@@ -611,6 +611,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
   { key: "dev", label: "Dev", icon: "Code2", group: "PROYECTO", requiresProject: true },
   { key: "design", label: "Design", icon: "Palette", group: "PROYECTO", requiresProject: true },
   { key: "analytics", label: "Analytics", icon: "BarChart2", group: "PROYECTO", requiresProject: true },
+  { key: "finance", label: "Finance", icon: "Coins", group: "PROYECTO", requiresProject: true },
 ];
 
 // LML reference (kept for a small reference card).
@@ -715,4 +716,37 @@ export const ANALYTICS_ASSET_TYPES: Record<string, { label: string; color: strin
   learning_extraction:  { label: "Extraccion de aprendizaje", color: "warning"   },
   strategy_adjustment:  { label: "Ajuste de estrategia",    color: "destructive" },
   learning_report:      { label: "Reporte de aprendizaje",  color: "muted"       },
+};
+
+
+// ============================================================
+// FINANCE CAPABILITIES
+// ============================================================
+export type FinanceCapability = {
+  key: string;
+  label: string;
+  description: string;
+  producesAssetType: string;
+};
+
+export const FINANCE_CAPABILITIES: FinanceCapability[] = [
+  { key: "project_financials",  label: "Proyección financiera",    description: "Flujo de caja, ingresos y costos proyectados a N meses con supuestos explícitos.",          producesAssetType: "financial_projection" },
+  { key: "cost_analysis",       label: "Análisis de costos",       description: "Desglose de costos operativos, infraestructura y costo de adquisición de clientes (CAC).",   producesAssetType: "cost_analysis"        },
+  { key: "pricing_model",       label: "Modelo de precios",        description: "Definir tiers, precios, descuentos y lógica de monetización.",                               producesAssetType: "pricing_model"        },
+  { key: "viability_analysis",  label: "Análisis de viabilidad",   description: "¿El proyecto es financieramente sostenible? ¿Cuándo llega a breakeven?",                     producesAssetType: "viability_report"     },
+  { key: "budget_allocation",   label: "Distribución de presupuesto", description: "Cómo repartir una inversión entre áreas: marketing, dev, infraestructura, ventas.",       producesAssetType: "budget_plan"          },
+  { key: "unit_economics",      label: "Métricas unitarias",       description: "LTV, CAC, margen por cliente, payback period.",                                               producesAssetType: "unit_economics"       },
+  { key: "investment_analysis", label: "Análisis de inversión",    description: "Evaluar si una inversión (herramienta, canal, contratación) vale la pena y cuándo.",         producesAssetType: "investment_analysis"  },
+  { key: "financial_report",    label: "Reporte financiero",       description: "Resumen ejecutivo del estado financiero del proyecto con insights y recomendaciones.",       producesAssetType: "financial_report"     },
+];
+
+export const FINANCE_ASSET_TYPES: Record<string, { label: string; color: string }> = {
+  financial_projection: { label: "Proyección financiera", color: "warning"     },
+  cost_analysis:        { label: "Análisis de costos",    color: "muted"       },
+  pricing_model:        { label: "Modelo de precios",     color: "primary"     },
+  viability_report:     { label: "Viabilidad",            color: "success"     },
+  budget_plan:          { label: "Plan de presupuesto",   color: "warning"     },
+  unit_economics:       { label: "Métricas unitarias",    color: "primary"     },
+  investment_analysis:  { label: "Análisis de inversión", color: "destructive" },
+  financial_report:     { label: "Reporte financiero",    color: "muted"       },
 };
