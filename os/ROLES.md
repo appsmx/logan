@@ -1,6 +1,6 @@
 # ROLES.md
 
-**Versión:** 0.1 · **Estado:** En construcción · **Fecha:** 2026-07-29
+**Versión:** 0.2 · **Estado:** En construcción · **Fecha:** 2026-08-08
 **Propósito:** El registro oficial de todos los agentes del ecosistema LOGAN OS.
 Un nuevo agente se incorpora añadiendo una entrada aquí (sin modificar la arquitectura).
 
@@ -56,15 +56,22 @@ Primer especialista. Genera valor económico inmediato.
 Constitución, se dirige al usuario.
 **role_doc:** `roles/marketing/ROLE.md`
 
-### Dev (especialista, planificado)
-Desarrollo de producto.
+### LOGAN Dev (especialista, activo)
+Desarrollo de producto. Genera código production-grade y arquitectura técnica.
 - Diseñar la arquitectura técnica.
-- Implementar funcionalidades.
-- Mantener la calidad técnica.
-- Documentar las decisiones técnicas.
+- Implementar funcionalidades completas.
+- Refactorizar código existente.
+- Escribir tests unitarios y de integración.
+- Documentar decisiones técnicas como DEC-XXX.
+- Revisar código: bugs, vulnerabilidades, antipatrones.
+- Definir estructura de proyecto (scaffolding, naming).
+- Cada entregable incluye hipótesis técnica verificable (DEC-LOGAN-004).
+**Never:** habla directamente con el usuario, decide la visión del producto,
+modifica la Constitución, opera sin mandato de Core.
 **role_doc:** `roles/dev/ROLE.md`
+**endpoint:** `POST /api/dev/execute`
 
-### Design (especialista, activo)
+### LOGAN Design (especialista, activo)
 Diseño de producto y de experiencia. Dueño del sistema visual y la experiencia de usuario.
 - Diseñar interfaces web, móvil y conversacionales.
 - Definir y mantener sistemas de diseño visual (colores, tipografía, espaciado, componentes).
@@ -75,8 +82,10 @@ Diseño de producto y de experiencia. Dueño del sistema visual y la experiencia
 - Colaborar con Dev en handoff de diseño a código.
 - Colaborar con Marketing en coherencia visual entre producto y campañas.
 - Cada entregable incluye hipótesis de diseño verificable (DEC-LOGAN-004).
-**Never:** decide la visión del producto, se dirige al usuario, escribe código backend, modifica la arquitectura de LOGAN OS, opera sin mandato de Core.
+**Never:** decide la visión del producto, se dirige al usuario, escribe código backend,
+modifica la arquitectura de LOGAN OS, opera sin mandato de Core.
 **role_doc:** `roles/design/ROLE.md`
+**endpoint:** `POST /api/design/execute`
 
 ### Analytics (especialista, planificado) — verifica las hipótesis de los demás roles
 - Verificar las hipótesis registradas por otros roles.
