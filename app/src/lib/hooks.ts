@@ -83,7 +83,7 @@ export function useCreateProject() {
 export function useUpdateProject(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: Partial<Pick<Project, "vision" | "users" | "status" | "currentPhase" | "currentMode">>) =>
+    mutationFn: (body: Partial<Pick<Project, "vision" | "users" | "status" | "currentPhase" | "currentMode" | "repo">>) =>
       api<Project>(`/api/projects/${id}`, {
         method: "PATCH",
         body: JSON.stringify(body),

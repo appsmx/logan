@@ -23,6 +23,10 @@ model Project {
   status      String   @default("En construcción") // En construcción | En revisión | Oficial
   currentPhase Int     @default(1) // 1..8 — Ciclo metodológico
   currentMode String  @default("exploracion") // exploracion | arquitectura | construccion | auditoria | evolucion
+  // GitHub repo name associated with this project (e.g. "mrtramite", "mariscoseljona").
+  // Single source of truth for which repo Core should target when emitting git_* actions.
+  // Null = no repo associated (Core should ask the user which repo to use before git actions).
+  repo        String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

@@ -236,7 +236,7 @@ export type CoreEndpointResult = {
 /** Subset of the Project fields used by the system-prompt builder. */
 export type ProjectBibliaContext = Pick<
   Project,
-  "id" | "name" | "vision" | "users" | "status" | "currentPhase" | "currentMode"
+  "id" | "name" | "vision" | "users" | "status" | "currentPhase" | "currentMode" | "repo"
 >;
 
 export type MarketingDeliverable = {

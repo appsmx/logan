@@ -254,16 +254,18 @@ function StateTab() {
   const [status, setStatus] = React.useState("En construcción");
   const [phase, setPhase] = React.useState(1);
   const [mode, setMode] = React.useState("exploracion");
+  const [repo, setRepo] = React.useState("");
 
   React.useEffect(() => {
     setStatus(project.data?.status ?? "En construcción");
     setPhase(project.data?.currentPhase ?? 1);
     setMode(project.data?.currentMode ?? "exploracion");
+    setRepo(project.data?.repo ?? "");
   }, [project.data]);
 
   const save = () => {
     update.mutate(
-      { status, currentPhase: phase, currentMode: mode },
+      { status, currentPhase: phase, currentMode: mode, repo: repo.trim() || null },
       {
         onSuccess: () => toast.success("Estado actualizado"),
         onError: (e: Error) => toast.error(e.message),
@@ -278,7 +280,8 @@ function StateTab() {
           Estado del proyecto
         </CardTitle>
         <CardDescription>
-          Estado global, fase del ciclo metodológico y modo de trabajo vigente.
+          Estado global, fase del ciclo metodológico, modo de trabajo y
+          repositorio GitHub asociado.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -332,8 +335,29 @@ function StateTab() {
             </Select>
           </div>
         </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="project-repo">Repositorio GitHub asociado</Label>
+          <Input
+            id="project-repo"
+            value={repo}
+            onChange={(e) => setRepo(e.target.value)}
+            placeholder="mrtramite"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Nombre del repo de GitHub que LOGAN debe usar por defecto al emitir
+            acciones git (branches, archivos, PRs) para este proyecto. Debe estar
+            en <code className="rounded bg-muted px-1 py-0.5">LOGAN_ALLOWED_REPOS</code>{" "}
+            (mrtramite, mariscoseljona). Vacío = sin repo asociado; LOGAN te
+            preguntará qué repo usar antes de emitir acciones git.
+          </p>
+        </div>
+
         <div className="flex justify-end">
-          <Button onClick={save}>
+          <Button onClick={save} disabled={update.isPending}>
             <Save className="size-4" />
             Guardar estado
           </Button>

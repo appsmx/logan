@@ -747,3 +747,60 @@ Stage Summary:
 - 3 PRs closed in mrtramite (PR #1 README_LOGAN still open, PR #2 and #3 closed as wrong-repo)
 - Showcase page has placeholder phone/email (5215512345678 / hola@logancorp.mx) — user needs to replace with real contact info
 - Pending: arreglar bug de project→repo mapping en Core, módulo Asistente IA, scaffolding, Memory con git access, deploy en logancorp.mx
+
+---
+Task ID: 26
+Agent: full-stack-developer
+Task: Fix the P0 bug from Task 25 — Core doesn't know which GitHub repo is associated with each project. When user says "crea Biblia para Mariscos El Jona", Core emits `git_create_branch` with `repo: "mrtramite"` (the first repo in `LOGAN_ALLOWED_REPOS`) instead of `mariscoseljona`. Caused 2 wrong PRs in mrtramite that had to be closed. Detailed agent record at `agent-ctx/26-full-stack-developer.md`.
+
+Work Log:
+- Read worklog Task 25 (bug diagnosis). Read relevant files: `prisma/schema.prisma` (Project model — no `repo` field), `src/lib/core/system-prompt.ts` (lines 84-87 hardcoded `"mrtramite"` in git action JSON examples + line 167 hardcoded `"mrtramite"` in "Repositorios permitidos" line), `src/lib/core/types.ts` (CoreAction types — git actions take `repo` param), `src/lib/core/execute-actions.ts`, `src/lib/git/tools.ts` (`isRepoAllowed()`), `src/lib/git/github-client.ts` (`listAllowedRepos()`), `src/app/api/core/route.ts` (loads project, builds `biblia: ProjectBibliaContext`), `src/components/logan/sections/BibleSection.tsx` (`StateTab` UI), `src/lib/logan-types.ts` (Project type), `src/lib/hooks.ts` (`useUpdateProject`), `src/app/api/projects/[id]/route.ts` (PATCH endpoint), `src/app/api/projects/route.ts` (GET/POST endpoints).
+
+- **Change 1 — Prisma schema** (`prisma/schema.prisma`): added `repo String?` to the Project model. Nullable so existing projects (created before this fix) keep working with `repo=null` (means "no repo associated"). Comment documents: "GitHub repo name associated with this project. Single source of truth for which repo Core should target when emitting git_* actions. Null = no repo associated (Core should ask the user which repo to use before git actions)." Ran `bun run db:push --accept-data-loss` → SQLite synced, Prisma Client regenerated (v6.19.2). Existing 2 projects got `repo=null` automatically (Prisma added the column with NULL default).
+
+- **Change 2 — System prompt** (`src/lib/core/system-prompt.ts`): converted `const RESPONSE_FORMAT` (a module-level constant string) into `function renderResponseFormat(project: ProjectBibliaContext): string`. The function computes `repoExample = project.repo || "mrtramite"`, `allowedList = listAllowedRepos().join(", ")` (real list from `LOGAN_ALLOWED_REPOS` env var), and a new explicit `repoGuidance` paragraph that tells Core which repo to use by default (different text if `project.repo` is set vs null). The big template literal now interpolates `${repoExample}` into all 6 git JSON examples (was hardcoded `"mrtramite"`), `${allowedList}` into the "Repositorios permitidos" line (was hardcoded `"mrtramite"`), and adds `${repoGuidance}` as a new paragraph right after. Updated `renderBiblia(project)` to add a new line right after the project name: `**Repositorio GitHub asociado:** \`mariscoseljona\`` (or "(no configurado — preguntar al usuario)" if null). Updated `buildSystemPrompt` to call `renderResponseFormat(project)` instead of referencing the deleted constant. Updated `ProjectBibliaContext` in `src/lib/core/types.ts` to add `repo` to the `Pick<>` list.
+
+- **Change 3 — Core route** (`src/app/api/core/route.ts`): added `repo: project.repo` to the `biblia: ProjectBibliaContext` initialization (line 143). This is the bridge between the DB column and the system-prompt builder.
+
+- **Change 4 — UI** (`src/components/logan/sections/BibleSection.tsx`): updated `StateTab` to include a "Repositorio GitHub asociado" text input below the Estado/Fase/Modo grid. Added local `repo` state + sync from server. Updated `save()` to include `repo: repo.trim() || null` in the PATCH body (empty string → null = "no repo associated"). Added `disabled={update.isPending}` to the "Guardar estado" button for visual feedback. Added hint paragraph: "Nombre del repo de GitHub que LOGAN debe usar por defecto al emitir acciones git... Debe estar en LOGAN_ALLOWED_REPOS (mrtramite, mariscoseljona). Vacío = sin repo asociado; LOGAN te preguntará qué repo usar antes de emitir acciones git."
+
+- **Change 5 — API endpoints** (`src/app/api/projects/[id]/route.ts` + `src/app/api/projects/route.ts`): GET (single + list) now returns `repo` field. POST returns `repo` field. PATCH accepts `body.repo`: if string → `data.repo = body.repo.trim() || null` (empty string normalizes to null); if `null` → `data.repo = null`. Updated `src/lib/logan-types.ts` to add `repo?: string | null` to Project type. Updated `src/lib/hooks.ts` to add `"repo"` to the `useUpdateProject` body type.
+
+- **Backfilled existing projects** via PATCH:
+  - "Mr. Trámite (test)" (id `cmslgu1ew0000ndgeb08qgp32`) → `repo: "mrtramite"` ✓
+  - "Mariscos El Jona" (id `cmsll0amf000sndyiwmi0bf7n`) → `repo: "mariscoseljona"` ✓
+
+- **End-to-end test passed**: POST `/api/core` with `projectId` = Mariscos El Jona + message "Crea un archivo TEST_MAPPING.md en el repo de Mariscos El Jona... Crea branch feature/test-mapping, escribe el archivo, abre PR." Response `actionsTaken` showed:
+  - `git_get_status` with `repo: "mariscoseljona"` ✓
+  - `git_create_branch` with `repo: "mariscoseljona"`, `branchName: "feature/test-mapping"` ✓
+  - `git_write_file` with `repo: "mariscoseljona"`, `branch: "feature/test-mapping"`, `path: "TEST_MAPPING.md"` ✓
+  - `git_create_pr` with `repo: "mariscoseljona"`, `prNumber: 2`, `prUrl: "https://github.com/appsmx/mariscoseljona/pull/2"` ✓
+  - All 4 git actions targeted `mariscoseljona` (NOT mrtramite). Bug fixed.
+
+- **GitHub verification**: queried GitHub API. mariscoseljona now has 2 open PRs (PR #1 Biblia + PR #2 test-mapping). mrtramite has NO new PR (only PR #1 README_LOGAN open + PRs #2/#3 closed from Task 25 bug). Confirms the fix end-to-end.
+
+- **Cleanup**: closed PR #2 in mariscoseljona (was a test) via `PATCH /repos/.../pulls/2 {state:"closed"}` + deleted `feature/test-mapping` branch via `DELETE /repos/.../git/refs/heads/feature/test-mapping` (HTTP 204). Post-cleanup: mariscoseljona has PR #1 (open, Biblia) + PR #2 (closed, test).
+
+- **Lint clean**: `bun run lint` exit 0, zero errors.
+- **Dev log clean**: last 50 lines show only SQL queries + `POST /api/core 200 in 20.6s`. No compile errors.
+
+Stage Summary:
+The P0 bug from Task 25 is fixed end-to-end. Core now knows which GitHub repo belongs to which project, via 5 coordinated file changes:
+
+1. **Schema** — `Project.repo String?` is the single source of truth (Art. IV) for the project↔repo mapping. Nullable for backward compat.
+2. **System prompt** — `renderResponseFormat(project)` interpolates the project's `repo` into all git JSON examples + adds an explicit guidance paragraph telling Core "USA ESTE REPO por defecto". Also dynamically lists the real allowed repos from `LOGAN_ALLOWED_REPOS` (was hardcoded "mrtramite").
+3. **Core route** — passes `project.repo` into the `biblia` context.
+4. **UI** — Bible > Estado tab now has a "Repositorio GitHub asociado" text input + hint. Empty normalizes to null. Users can set/change it.
+5. **API** — GET/PATCH/POST endpoints all handle the `repo` field.
+
+Defense-in-depth (3 layers): (1) Biblia section line shows the repo, (2) dynamic JSON examples use the project's repo (was hardcoded), (3) explicit guidance paragraph tells Core "USE THIS REPO by default" or "ASK the user which repo to use" if not set.
+
+Verified by real PR creation: Core correctly targeted `mariscoseljona` (NOT mrtramite) when asked to create a file for the "Mariscos El Jona" project. Test PR #2 (https://github.com/appsmx/mariscoseljona/pull/2) was created, then closed + branch deleted as cleanup.
+
+Constraints respected strictly: Art. III (simplicity — 5 small file changes, no over-engineering), Art. IV (única fuente de verdad — `Project.repo` is the single source), Art. IX (el humano decide — user sets the repo via UI; LOGAN never merges), backward compat (projects without `repo` set still work — Core asks the user instead of defaulting), Spanish UI text throughout, English code comments, no indigo/blue colors, lint clean.
+
+**Test PR (closed as cleanup):** https://github.com/appsmx/mariscoseljona/pull/2 — was a test of the fix; closed and branch deleted. Not a real deliverable.
+
+**What was NOT done (per instructions):** Change 4 (defensive warning in `src/lib/git/tools.ts` if repo doesn't match project's repo) was skipped — the system-prompt fix (Change 2) is the main fix and is sufficient. Adding a project→repo mismatch check in the tools would require passing the project into every tool call, which is more invasive than needed (Art. III).
+
+Files modified: `prisma/schema.prisma`, `src/lib/core/types.ts`, `src/lib/core/system-prompt.ts`, `src/app/api/core/route.ts`, `src/lib/logan-types.ts`, `src/lib/hooks.ts`, `src/app/api/projects/route.ts`, `src/app/api/projects/[id]/route.ts`, `src/components/logan/sections/BibleSection.tsx`. New file: `agent-ctx/26-full-stack-developer.md`.

@@ -32,6 +32,7 @@ export async function GET() {
         status: p.status,
         currentPhase: p.currentPhase,
         currentMode: p.currentMode,
+        repo: p.repo,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
         _count: {
@@ -91,6 +92,7 @@ export async function POST(req: NextRequest) {
       status: project.status,
       currentPhase: project.currentPhase,
       currentMode: project.currentMode,
+      repo: project.repo,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
     });

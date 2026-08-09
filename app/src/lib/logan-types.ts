@@ -8,6 +8,9 @@ export type Project = {
   status: string; // En construcción | En revisión | Oficial
   currentPhase: number;
   currentMode: string; // exploracion | arquitectura | construccion | auditoria | evolucion
+  // GitHub repo name associated with this project (e.g. "mrtramite", "mariscoseljona").
+  // Null = no repo associated. Single source of truth for which repo Core targets.
+  repo?: string | null;
   createdAt: string;
   updatedAt: string;
   _count?: {

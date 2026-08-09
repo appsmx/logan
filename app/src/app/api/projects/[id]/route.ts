@@ -28,6 +28,7 @@ export async function GET(
       status: p.status,
       currentPhase: p.currentPhase,
       currentMode: p.currentMode,
+      repo: p.repo,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
     });
@@ -53,6 +54,9 @@ export async function PATCH(
     if (typeof body.currentPhase === "number")
       data.currentPhase = body.currentPhase;
     if (typeof body.currentMode === "string") data.currentMode = body.currentMode;
+    // repo field — null is allowed (means "no repo associated").
+    if (typeof body.repo === "string") data.repo = body.repo.trim() || null;
+    else if (body.repo === null) data.repo = null;
 
     const updated = await db.project.update({ where: { id }, data });
     return NextResponse.json({
@@ -63,6 +67,7 @@ export async function PATCH(
       status: updated.status,
       currentPhase: updated.currentPhase,
       currentMode: updated.currentMode,
+      repo: updated.repo,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
     });

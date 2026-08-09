@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
   try { memoryReport = await buildMemoryReport(projectId); }
   catch (e) { console.error("[core] Memory falló:", (e as Error).message); memoryReport = "## Reporte de Memory\n\n> No se pudo generar el reporte."; }
 
-  const biblia: ProjectBibliaContext = { id: project.id, name: project.name, vision: project.vision, users: project.users, status: project.status, currentPhase: project.currentPhase, currentMode: project.currentMode };
+  const biblia: ProjectBibliaContext = { id: project.id, name: project.name, vision: project.vision, users: project.users, status: project.status, currentPhase: project.currentPhase, currentMode: project.currentMode, repo: project.repo };
   const systemPrompt = buildSystemPrompt(biblia, memoryReport);
 
   let rawText: string;

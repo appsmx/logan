@@ -8,6 +8,7 @@
 import {
   AUTHORITY_HIERARCHY, CONSTITUTION_ARTICLES, OS_MANUAL, ROLES,
 } from "@/lib/logan-os-data";
+import { listAllowedRepos } from "@/lib/git/github-client";
 import type { ProjectBibliaContext } from "@/lib/core/types";
 
 function parseUsers(raw: string): string[] {
@@ -49,8 +50,12 @@ function renderAuthority(): string {
 
 function renderBiblia(project: ProjectBibliaContext): string {
   const users = parseUsers(project.users);
+  const repoLine = project.repo
+    ? `- **Repositorio GitHub asociado:** \`${project.repo}\``
+    : `- **Repositorio GitHub asociado:** *(no configurado — preguntar al usuario antes de emitir acciones git)*`;
   const lines: string[] = [
     `## Biblia del proyecto activo: ${project.name}`, "",
+    repoLine,
     `- **Estado del proyecto:** ${project.status}`,
     `- **Fase actual del ciclo:** Fase ${project.currentPhase} — ${PHASE_NAMES[project.currentPhase] ?? "(sin nombre)"}`,
     `- **Modo de trabajo activo:** ${MODE_LABEL[project.currentMode] ?? project.currentMode}`,
@@ -63,7 +68,17 @@ function renderBiblia(project: ProjectBibliaContext): string {
   return lines.join("\n");
 }
 
-const RESPONSE_FORMAT = `## Tu formato de respuesta (OBLIGATORIO)
+function renderResponseFormat(project: ProjectBibliaContext): string {
+  // The project's repo (if configured) is what Core should target by default.
+  // Fallback "mrtramite" only for projects without a repo configured.
+  const repoExample = project.repo || "mrtramite";
+  // The actual list of allowed repos from LOGAN_ALLOWED_REPOS env var.
+  const allowedList = listAllowedRepos().join(", ") || "mrtramite";
+  // Explicit guidance that tells Core which repo to use by default.
+  const repoGuidance = project.repo
+    ? `**Repositorio del proyecto activo:** \`${project.repo}\`. Cuando emitas acciones git (\`git_create_branch\`, \`git_write_file\`, \`git_create_pr\`, \`git_get_status\`), USA ESTE REPO por defecto — es el repo asociado al proyecto en su Biblia. Si el usuario pide explícitamente otro repo, puedes usarlo, PERO debe estar en la lista de permitidos anterior. Si el proyecto activo no tiene repo configurado, PREGUNTA al usuario qué repo usar antes de emitir cualquier acción git.`
+    : `**Repositorio del proyecto activo:** *(no configurado)*. Antes de emitir cualquier acción git, PREGUNTA al usuario qué repo debe usar (debe estar en la lista de permitidos anterior). NO inventes un repo por defecto — si emites una acción git con un repo no permitido, el backend la rechazará con \`status="fallido"\`.`;
+  return `## Tu formato de respuesta (OBLIGATORIO)
 
 Respondes con **ÚNICAMENTE un único objeto JSON**. Sin texto fuera del JSON. El objeto tiene esta forma exacta:
 
@@ -81,10 +96,10 @@ Respondes con **ÚNICAMENTE un único objeto JSON**. Sin texto fuera del JSON. E
     { "type": "finance_execute", "capability": "pricing_model", "brief": "..." },
     { "type": "legal_execute", "capability": "draft_privacy_policy", "brief": "..." },
     { "type": "support_execute", "capability": "draft_help_article", "brief": "..." },
-    { "type": "git_create_branch", "repo": "mrtramite", "branchName": "feature/logan-integracion", "fromBranch": "main" },
-    { "type": "git_write_file", "repo": "mrtramite", "branch": "feature/logan-integracion", "path": "docs/INTEGRACION_LOGAN.md", "content": "# Documentación...", "commitMessage": "docs: agrega guía de integración LOGAN" },
-    { "type": "git_create_pr", "repo": "mrtramite", "branch": "feature/logan-integracion", "title": "feat: integración LOGAN-Mr.Trámite", "body": "Qué cambió y por qué...", "hypothesisContext": "Contexto...", "hypothesis": "Creemos que X pasará porque Y", "hypothesisPrediction": "Métrica observable que lo confirmaría" },
-    { "type": "git_get_status", "repo": "mrtramite" }
+    { "type": "git_create_branch", "repo": "${repoExample}", "branchName": "feature/logan-integracion", "fromBranch": "main" },
+    { "type": "git_write_file", "repo": "${repoExample}", "branch": "feature/logan-integracion", "path": "docs/INTEGRACION_LOGAN.md", "content": "# Documentación...", "commitMessage": "docs: agrega guía de integración LOGAN" },
+    { "type": "git_create_pr", "repo": "${repoExample}", "branch": "feature/logan-integracion", "title": "feat: integración LOGAN-Mr.Trámite", "body": "Qué cambió y por qué...", "hypothesisContext": "Contexto...", "hypothesis": "Creemos que X pasará porque Y", "hypothesisPrediction": "Métrica observable que lo confirmaría" },
+    { "type": "git_get_status", "repo": "${repoExample}" }
   ],
   "constitutional_check": { "approved": true, "violated_article": null, "note": "" },
   "session_update": { "advance": "...", "pending": "...", "nextObjective": "...", "risks": "..." }
@@ -164,17 +179,19 @@ Ejemplos:
 
 LOGAN puede modificar repositorios GitHub con 4 herramientas. Estas herramientas tienen **límites de seguridad no negociables** (DEC-LOGAN-014, Art. IX — el humano decide). El backend valida cada acción; si la rechaza, el \`ActionTaken\` queda con \`status="fallido"\` y verás el error.
 
-**Repositorios permitidos** (env \`LOGAN_ALLOWED_REPOS\`): \`mrtramite\`. Si el usuario pide cualquier otro repo (incluido \`logan\`), dile: "No tengo permiso para modificar ese repositorio. Repositorios permitidos: mrtramite." \`logan\` está **prohibido siempre** (LOGAN no puede modificar su propia metodología — Art. I).
+**Repositorios permitidos** (env \`LOGAN_ALLOWED_REPOS\`): \`${allowedList}\`. Si el usuario pide cualquier otro repo (incluido \`logan\`), dile: "No tengo permiso para modificar ese repositorio. Repositorios permitidos: ${allowedList}." \`logan\` está **prohibido siempre** (LOGAN no puede modificar su propia metodología — Art. I).
+
+${repoGuidance}
 
 ### git_get_status
 Lee el estado de un repo (branches, PRs abiertos, último commit en main). **Read-only**. Úsalo SIEMPRE antes de crear un branch o PR — para saber qué existe y no pisar nada.
 
-Ejemplo: "¿Qué estado tiene Mr. Trámite en GitHub?" → \`{ "type": "git_get_status", "repo": "mrtramite" }\`.
+Ejemplo: "¿Qué estado tiene Mr. Trámite en GitHub?" → \`{ "type": "git_get_status", "repo": "${repoExample}" }\`.
 
 ### git_create_branch
 Crea un branch desde \`fromBranch\` (default \`main\`). El \`branchName\` **DEBE** empezar con: \`feature/\`, \`fix/\`, \`docs/\`, \`chore/\`, o \`refactor/\`. Si no, el backend lo rechaza.
 
-Ejemplo: \`{ "type": "git_create_branch", "repo": "mrtramite", "branchName": "feature/logan-readme", "fromBranch": "main" }\`.
+Ejemplo: \`{ "type": "git_create_branch", "repo": "${repoExample}", "branchName": "feature/logan-readme", "fromBranch": "main" }\`.
 
 ### git_write_file
 Crea o actualiza un archivo en un branch. **Límites**:
@@ -230,6 +247,7 @@ Emite las acciones en ORDEN en el array \`actions\` (el backend las ejecuta en o
 - \`advance\`, \`pending\`, \`nextObjective\`, \`risks\`.
 
 Responde en **español** siempre.`;
+}
 
 export function buildSystemPrompt(project: ProjectBibliaContext, memoryReport: string): string {
   return [
@@ -271,7 +289,7 @@ export function buildSystemPrompt(project: ProjectBibliaContext, memoryReport: s
     "",
     memoryReport,
     "",
-    RESPONSE_FORMAT,
+    renderResponseFormat(project),
   ].join("\n");
 }
 
