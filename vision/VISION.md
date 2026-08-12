@@ -915,6 +915,26 @@ La recomendación de la otra IA tiene **un núcleo de verdad envuelto en un encu
 **Fecha:** 2026-08-08
 **Corrige:** DEC-LOGAN-005/012/015 (parcialmente — cambia `logan.mx` por `logancorp.mx` como dominio corporativo).
 
+#### DEC-LOGAN-017 — Mix de modelos GLM-5.2 / 5.1 / 5-turbo según criticidad de tarea
+**Problema:** Tras el deploy en `logancorp.vercel.app` (Task 32-33, agosto 2026), el `TASK_MODEL_MAP` del cliente LLM asignaba `gemini-2.5-flash` a las 12 tareas por defecto. Esto no reflejaba el mix real que se quería: Core + Dev necesitan máxima calidad (equivalente Claude Sonnet), mientras que tareas customer-facing (Assistant, Showcase) y rutinarias (Validator, Marketing, Finance, Support) priorizan velocidad y costo. No existía una decisión formal que documentara el mix.
+**Alternativas:** (a) usar un solo modelo para todo (GLM-4.6 era el candidato pre-5.x); (b) asignar GLM-5.2 a las 12 tareas (calidad máxima en todo, pero caro y lento); (c) mapear por tarea según criticidad — 3 tiers de calidad.
+**Decisión:** Tres tiers de calidad mapeados a las 12 tareas LLM del ecosistema:
+- **GLM-5.2 (máxima calidad, nivel Claude Sonnet):** `core_decide`, `core_integrate`, `dev`. Estas son las tareas donde LOGAN necesita razonar más profundo — decidir a quién delegar, integrar entregables de múltiples especialistas en una sola voz coherente, y generar código production-grade.
+- **GLM-5.1 (buena calidad):** `design`, `analytics`, `legal`. Tareas que requieren precisión y cumplimiento (un análisis legal con errores es peligroso), pero no son críticas para la coordinación del ecosistema.
+- **GLM-5-turbo (rápido y barato):** `validator`, `marketing`, `finance`, `support`, `assistant`, `showcase`. Tareas customer-facing sensibles a latencia (Assistant y Showcase responden a clientes en tiempo real) y tareas internas donde la velocidad > profundidad (Validator ya corre en paralelo + fire-and-forget desde Task 30).
+**Justificación:**
+- **Costo-eficiencia:** GLM-5-turbo cuesta una fracción de GLM-5.2 por token. Customer-facing recibe cientos de requests al día (especialmente si WhatsApp Cloud API está conectado a un producto); usar GLM-5.2 ahí quemaría créditos sin valor agregado.
+- **Latencia:** el flujo crítico de Core (3 llamadas LLM secuenciales cuando hay delegación) ya toma 15-25s. Mover Validator y Marketing a GLM-5-turbo reduce ~3-5s del turno total sin pérdida perceptible de calidad.
+- **Calidad donde importa:** Dev generando código de producción y Core decidiendo/integrando son los lugares donde un error cuesta caro (bug en producción, decisión equivocada). Ahí GLM-5.2 se justifica.
+- **Fallback automático:** si `ZAI_API_KEY` no está configurada o sin créditos, `getLLMConfigWithFallback(task)` cae a `gemini-2.0-flash` (Google AI Studio free tier). El ecosistema sigue funcionando, aunque con calidad degradada uniforme.
+**Consecuencias:**
+- `src/lib/llm/config.ts` es el único punto de configuración del mix. Editar ese archivo para cambiar el mapeo. Documentado con comentarios sobre las justificaciones.
+- Vercel Pro (DEC-LOGAN-013) se vuelve más urgente — GLM-5.2 tiene latencias altas; los 10s del tier free pueden no bastar para `core_decide`. Mientras tanto, los turnos sin delegación (1 sola llamada LLM) sí caben en 10s.
+- Si Z.ai lanza GLM-6.x en el futuro, el mix se reevalúa bajo la misma lógica de tiers. Esta decisión no ata a modelos específicos, sino al principio de "3 tiers de calidad según criticidad".
+- El fallback Gemini es uniforme (no respeta tiers) — esto es aceptable porque Gemini Flash es razonable para todo. Si en el futuro se quiere un fallback que respete tiers, se requiere un mapeo equivalente para Gemini.
+**Fecha:** 2026-08-12
+**Corrige:** ninguna (formaliza una práctica que ya operaba sin decisión registrada).
+
 #### DEC-LOGAN-013 — Vercel Pro ($20 USD/mes) para producción de LOGAN OS
 **Problema:** Vercel Hobby (free) tiene timeout de 10s en funciones serverless, insuficiente para el flujo de 3 llamadas LLM de LOGAN (Core → Marketing → Core integra + validador = 30-50s por turno delegado).
 **Alternativas:** (a) Vercel Pro $20/mes (timeout 60s); (b) self-host en VPS (~$5-10/mes, administración manual); (c) optimizar el flujo a <10s (trabajo de desarrollo); (d) quitar la delegación a Marketing en producción.
