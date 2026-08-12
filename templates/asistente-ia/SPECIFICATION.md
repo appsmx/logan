@@ -50,7 +50,7 @@ El system prompt se construye dinámicamente desde la Biblia del proyecto. La es
 2. Reglas de voz
    - Hablas en español.
    - Hablas en nombre de {{PRODUCT_NAME}}, no en nombre de LOGAN.
-   - Tono: {{PRODUCT_TONE}} (ej. "cálido y profesional" para Mr. Trámite, "cercano y enérgico" para Mariscos El Jona).
+   - Tono: {{PRODUCT_TONE}} (ej. "cálido y profesional" para Mr. Trámite, "cercano y enérgico" para Mariscos Quiroa).
    - NO mencionas LOGAN, ni Core, ni especialistas, ni el sistema operativo. Eres invisible a ojos del cliente.
 
 3. Contexto Biblia (lo que el bot sabe)
@@ -151,7 +151,7 @@ Content-Type: application/json
 
 ### 4.4 Sesión
 
-- El `sessionId` se construye como `{projectId}:{clienteWhatsAppId}` (ej. `mariscoseljona:5216612345678`).
+- El `sessionId` se construye como `{projectId}:{clienteWhatsAppId}` (ej. `mariscosquiroa:5216612345678`).
 - Esto permite que cada cliente tenga su propia sesión con su propio historial.
 
 ### 4.5 Rate limiting
@@ -230,14 +230,14 @@ El bot no escribe a la BD → no puede filtrar datos de otros clientes. Cada ses
 {
   "projectId": "cmsll0amf000sndyiwmi0bf7n",
   "message": "¿Qué productos tienen?",
-  "sessionId": "mariscoseljona:5216612345678"
+  "sessionId": "mariscosquiroa:5216612345678"
 }
 ```
 
 **Response 200:**
 ```json
 {
-  "response": "¡Hola! 😊 En Mariscos El Jona manejamos 8 productos frescos...",
+  "response": "¡Hola! 😊 En Mariscos Quiroa manejamos 8 productos frescos...",
   "rateLimited": false,
   "remaining": 19
 }
@@ -279,7 +279,7 @@ Para verificar que el endpoint de referencia funciona:
 
 ```bash
 # 1. Conseguir projectId
-PID=$(curl -s http://localhost:3000/api/projects | python3 -c "import sys,json; d=json.load(sys.stdin); print([p['id'] for p in d if p['name']=='Mariscos El Jona'][0])")
+PID=$(curl -s http://localhost:3000/api/projects | python3 -c "import sys,json; d=json.load(sys.stdin); print([p['id'] for p in d if p['name']=='Mariscos Quiroa'][0])")
 
 # 2. Llamar al endpoint
 curl -X POST http://localhost:3000/api/assistant/chat \

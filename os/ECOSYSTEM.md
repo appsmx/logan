@@ -7,6 +7,7 @@
 | Producto | Estado | Dominio | Repositorio | Lanzamiento |
 |---|---|---|---|---|
 | Mr. Trámite | En vivo | mrtramite.vercel.app (mrtramite.mx pendiente) | github.com/appsmx/mrtramite | 2026-07 |
+| Mariscos Quiroa | En vivo | mariscosquiroa.com | github.com/appsmx/mariscosquiroa | 2026-08 |
 | Hércules Bro | Planificado | herculesbro.mx (pendiente) | github.com/appsmx/hercules-bro (pendiente) | — |
 | Sistema para Productores Musicales | Planificado | por definir | por definir | — |
 
@@ -74,7 +75,7 @@
 - Configurar Google Workspace para correos.
 - Cargar $200 USD en Z.ai (créditos) — sin créditos, los endpoints LLM devuelven 503.
 - Activar Vercel Pro ($20/mes) cuando los turnos delegados excedan 10s en producción.
-- Conectar WhatsApp Cloud API a productos (Mr. Trámite, Mariscos El Jona) usando `templates/asistente-ia/`.
+- Conectar WhatsApp Cloud API a productos (Mr. Trámite, Mariscos Quiroa) usando `templates/asistente-ia/`.
 - Etapa 5: Hércules Bro.
 - Etapa 6: LOGAN corporativo en `logancorp.mx` (showcase B2B).
 
@@ -84,7 +85,7 @@
 | Mr. Trámite | $0 (validación) | 2026-08 |
 
 ## 7. Servicios incorporados
-- GitHub (appsmx) — repositorios públicos (`logan`, `logan-app`) + privados (`mrtramite`, `hercules-bro`)
+- GitHub (appsmx) — repositorios públicos (`logan`, `logan-app`) + privados (`mrtramite`, `mariscosquiroa`, `hercules-bro`)
 - Z.ai — proveedor LLM primario (GLM-5.2/5.1/5-turbo, DEC-LOGAN-017)
 - Google AI Studio — proveedor LLM fallback (Gemini 2.0 Flash free tier)
 - Vercel — deploy de `logancorp.vercel.app` (LOGAN OS) + `mrtramite.vercel.app` (Mr. Trámite)

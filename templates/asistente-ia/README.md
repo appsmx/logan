@@ -31,7 +31,7 @@ templates/asistente-ia/
 ├── SPECIFICATION.md             ← especificación formal (capabilities, contrato webhook, persistencia, rate limits, seguridad)
 ├── system-prompt-template.md    ← plantilla del system prompt con placeholders {{PRODUCT_NAME}}, {{BIBLIA_CONTEXT}}, etc.
 ├── webhook-handler-template.ts  ← código de referencia TS para recibir webhooks de WhatsApp Cloud API
-├── integration-guide.md         ← paso a paso: cómo instanciar este módulo en un producto (Mr. Trámite, Mariscos El Jona, futuros)
+├── integration-guide.md         ← paso a paso: cómo instanciar este módulo en un producto (Mr. Trámite, Mariscos Quiroa, futuros)
 └── example-biblia-context.md    ← ejemplo del contexto Biblia que se le pasa al bot
 ```
 
@@ -41,7 +41,7 @@ templates/asistente-ia/
 
 Resumen del flujo (el detalle completo está en `integration-guide.md`):
 
-1. **Crear el proyecto en LOGAN OS** (ya hecho para Mr. Trámite y Mariscos El Jona).
+1. **Crear el proyecto en LOGAN OS** (ya hecho para Mr. Trámite y Mariscos Quiroa).
 2. **Completar la Biblia del proyecto** (visión, usuarios, catálogo, precios, FAQ). El Asistente IA lee esto como contexto.
 3. **Crear una app en Meta for Developers** → obtener `WHATSAPP_TOKEN`, `PHONE_NUMBER_ID`, `WEBHOOK_VERIFY_TOKEN`, `APP_SECRET`.
 4. **Desplegar el webhook handler** (copiar `webhook-handler-template.ts` en el repo del producto, llenar credenciales). El handler:
@@ -98,7 +98,7 @@ A diferencia de los especialistas internos (Marketing/Dev/etc.), el Asistente IA
 ## Productos que pueden instanciarlo
 
 - **Mr. Trámite** (`mrtramite`) — bot para clientes que quieren iniciar un trámite, preguntar precios, subir documentos.
-- **Mariscos El Jona** (`mariscoseljona`) — bot para restaurantes y comercios que quieren cotizar mayoreo de mariscos.
+- **Mariscos Quiroa** (`mariscosquiroa`) — bot para restaurantes y comercios que quieren cotizar mayoreo de mariscos. En vivo en mariscosquiroa.com.
 - **Hércules Bro** (próximamente) — bot de atención al cliente.
 - Cualquier producto LOGAN futuro.
 
@@ -109,8 +109,8 @@ A diferencia de los especialistas internos (Marketing/Dev/etc.), el Asistente IA
 Si solo quieres probar el patrón sin montar Meta:
 
 ```bash
-# 1. Conseguir el projectId de Mariscos El Jona
-curl -s http://localhost:3000/api/projects | python3 -c "import sys,json; d=json.load(sys.stdin); print([p['id'] for p in d if p['name']=='Mariscos El Jona'][0])"
+# 1. Conseguir el projectId de Mariscos Quiroa
+curl -s http://localhost:3000/api/projects | python3 -c "import sys,json; d=json.load(sys.stdin); print([p['id'] for p in d if p['name']=='Mariscos Quiroa'][0])"
 
 # 2. Hablarle al asistente del producto
 curl -X POST http://localhost:3000/api/assistant/chat \
@@ -118,4 +118,4 @@ curl -X POST http://localhost:3000/api/assistant/chat \
   -d '{"projectId":"<id>","message":"¿Qué productos tienen?","sessionId":"test-1"}'
 ```
 
-La respuesta vendrá **en español, en la voz de Mariscos El Jona** (no en la voz de LOGAN), mencionando productos del contexto Biblia.
+La respuesta vendrá **en español, en la voz de Mariscos Quiroa** (no en la voz de LOGAN), mencionando productos del contexto Biblia.

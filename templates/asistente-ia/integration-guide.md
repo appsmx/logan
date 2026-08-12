@@ -1,6 +1,6 @@
 # Guía de Integración — Módulo Asistente IA
 
-> Paso a paso: cómo instanciar este módulo en un producto LOGAN OS (Mr. Trámite, Mariscos El Jona, futuros productos).
+> Paso a paso: cómo instanciar este módulo en un producto LOGAN OS (Mr. Trámite, Mariscos Quiroa, futuros productos).
 
 ---
 
@@ -153,7 +153,7 @@ La implementación de referencia construye el system prompt automáticamente des
 1. La función está en `src/lib/assistant/system-prompt.ts` (`buildAssistantSystemPrompt`).
 2. Recibe `ProjectBibliaContext` (nombre, visión, usuarios, etc.).
 3. Para productos con necesidades específicas, se puede extender la función con campos adicionales (catálogo, FAQ, procesos) leídos de la Biblia.
-4. La **voz del producto** se infiere del nombre + visión (ej. "Mariscos El Jona" → tono cercano y enérgico; "Mr. Trámite" → tono cálido y profesional).
+4. La **voz del producto** se infiere del nombre + visión (ej. "Mariscos Quiroa" → tono cercano y enérgico; "Mr. Trámite" → tono cálido y profesional).
 
 > **Art. III (simplicidad):** empezar con el template por defecto. Solo personalizar cuando la voz genérica no funcione para el producto.
 
@@ -190,7 +190,7 @@ Antes de salir a producción:
 
 ---
 
-## Ejemplo concreto: Mariscos El Jona
+## Ejemplo concreto: Mariscos Quiroa
 
 Proyecto ya existe en LOGAN OS (`cmsll0amf000sndyiwmi0bf7n`).
 
@@ -201,9 +201,9 @@ Proyecto ya existe en LOGAN OS (`cmsll0amf000sndyiwmi0bf7n`).
 
 **Para instanciar el bot:**
 
-1. **Completar la Biblia** con: catálogo detallado (8 productos con precios mayoreo/menudeo), FAQ, datos de contacto de Mariscos El Jona (WhatsApp/email reales).
+1. **Completar la Biblia** con: catálogo detallado (8 productos con precios mayoreo/menudeo), FAQ, datos de contacto de Mariscos Quiroa (WhatsApp/email reales).
 
-2. **Crear app de Meta** "Mariscos El Jona WhatsApp" → WhatsApp Cloud API.
+2. **Crear app de Meta** "Mariscos Quiroa WhatsApp" → WhatsApp Cloud API.
 
 3. **Variables de entorno:**
    ```bash
@@ -214,10 +214,10 @@ Proyecto ya existe en LOGAN OS (`cmsll0amf000sndyiwmi0bf7n`).
    ASSISTANT_API_BASE=https://logan-os.vercel.app   # o donde esté LOGAN OS
    ASSISTANT_PROJECT_ID=cmsll0amf000sndyiwmi0bf7n
    PRODUCT_WHATSAPP=https://wa.me/526611234567
-   PRODUCT_EMAIL=ventas@mariscoseljona.mx
+   PRODUCT_EMAIL=ventas@mariscosquiroa.com
    ```
 
-4. **Desplegar webhook** en el repo `mariscoseljona` (Vercel).
+4. **Desplegar webhook** en el repo `mariscosquiroa` (Vercel).
 
 5. **Verificar webhook** en Meta + suscribirse a `messages`.
 
@@ -237,7 +237,7 @@ Proyecto ya existe en LOGAN OS (`cmslgu1ew0000ndgeb08qgp32`).
 
 2. **Crear app de Meta** "Mr. Trámite WhatsApp".
 
-3. **Variables de entorno:** análogas a Mariscos El Jona, con `ASSISTANT_PROJECT_ID=cmslgu1ew0000ndgeb08qgp32`.
+3. **Variables de entorno:** análogas a Mariscos Quiroa, con `ASSISTANT_PROJECT_ID=cmslgu1ew0000ndgeb08qgp32`.
 
 4. **Desplegar webhook** en el repo `mrtramite`.
 
