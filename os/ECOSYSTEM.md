@@ -32,7 +32,7 @@
 | herculesbro.mx | Pendiente | Segundo producto | Neubox |
 
 ## 4. Decisiones estratégicas
-17 decisiones vigentes (DEC-LOGAN-001 a 017). Ver `vision/VISION.md`.
+19 decisiones vigentes (DEC-LOGAN-001 a 019). Ver `vision/VISION.md`.
 
 ## 5. Hitos
 
@@ -71,7 +71,7 @@
 - **Estado:** LOGAN OS v1.1 — completo y en producción.
 
 ### Pendiente
-- Comprar `logancorp.mx` en Neubox y migrar DNS a Vercel.
+- Comprar `logancorp.mx` en Neubox y migrar DNS a Vercel. **(DEC-LOGAN-018 + 019 — confirmado: compra preventiva sin lanzamiento de marca pública hasta Etapa 6.)**
 - Configurar Google Workspace para correos.
 - Cargar $200 USD en Z.ai (créditos) — sin créditos, los endpoints LLM devuelven 503.
 - Activar Vercel Pro ($20/mes) cuando los turnos delegados excedan 10s en producción.

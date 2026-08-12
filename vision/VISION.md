@@ -943,6 +943,53 @@ La recomendación de la otra IA tiene **un núcleo de verdad envuelto en un encu
 **Consecuencias:** presupuesto fijo de $20 USD/mes desde el deploy en producción. Se activa cuando se publique LOGAN en logan.mx (Etapa 6) o antes si decides desplegar LOGAN para uso personal desde Etapa 4. Durante la construcción (Etapas 4-5) seguimos en sandbox/localhost — $0.
 **Fecha:** 2026-08-01
 
+#### DEC-LOGAN-018 — Adquisición preventiva de logancorp.mx sin lanzamiento de marca
+**Problema:** El usuario quiere adquirir el dominio `logancorp.com`, pero está registrado desde 1997 (no disponible). Queda la alternativa `logancorp.mx` (DEC-LOGAN-016 original, disponible). Adicionalmente, el usuario pregunta si comprar el dominio puede ser contraproducente o no rentable dado que LOGAN no tiene clientes pagando todavía (Mr. Trámite en vivo sin ingresos, Mariscos Quiroa recién lanzado, Etapa 5/6 sin iniciar).
+**Alternativas:**
+- (a) **Compra preventiva de logancorp.mx hoy, sin lanzar marca.** Asegura el activo (~$11 USD), apunta el dominio al Vercel actual, pero NO se hace campañas con la marca LOGAN ni branding público hasta que Mr. Trámite valide el modelo con 5+ clientes.
+- (b) **Esperar a validar primero.** No comprar nada hasta que Mr. Trámite tenga 3+ clientes pagando. Riesgo: alguien más podría comprar `logancorp.mx` en esos 3-6 meses.
+- (c) **Lanzar marca ya.** Comprar múltiples TLDs (logancorp.mx, logancorp.ai, logancorp.org, etc.), hacer SEO, contenido, redes sociales, campañas Meta con marca LOGAN. Va contra DEC-LOGAN-001.
+- (d) **No comprar dominio nunca.** Quedarse con `logancorp.vercel.app` (subdominio gratis) indefinidamente.
+**Decisión:** **(a) Compra preventiva de logancorp.mx hoy, sin lanzamiento de marca.**
+**Justificación:**
+- **Costo-riesgo favorable:** $11 USD primer año (~$200 MXN). Si LOGAN nunca despega, el costo hundido es marginal. Si LOGAN despega y alguien más compró el dominio, recuperar cuesta $500-2000 USD o más (con un dueño especulador).
+- **Alineación con DEC-LOGAN-001:** la marca corporativa se LANZARÁ al final (después de productos exitosos), pero el dominio puede asegurarse antes sin lanzamiento público. El dominio parqueado apuntando al showcase de Vercel no es "lanzamiento" — es protección del activo.
+- **Alineación con DEC-LOGAN-016:** la decisión original ya establecía `logancorp.mx` como dominio corporativo. Esta decisión solo operacionaliza la compra.
+- **Timeline realista:** con 5+ clientes pagando Mr. Trámite (~$4,000 MXN/mes), el branding formal puede empezar. Mientras tanto, el showcase en `logancorp.mx` (parqueado) es un business card digital pasivo, no una campaña.
+- **Prueba de los 10 años:** ✓ La compra preventiva sobrevive 10 años porque protege un activo permanente (dominio = identidad corporativa) sin comprometer capital significativo.
+**Consecuencias:**
+- Comprar `logancorp.mx` en Neubox (~$11 USD primer año, ~$48 USD renovación anual).
+- Configurar DNS Neubox → Vercel: registro CNAME `www.logancorp.mx` → `cname.vercel-dns.com`, y registro A `logancorp.mx` → `76.76.21.21` (o el IP que indique Vercel).
+- Añadir el dominio custom en Vercel (Settings → Domains) y verificar.
+- **NO hacer** campañas Meta Ads con marca LOGAN hasta Etapa 6 (DEC-LOGAN-001 respetado).
+- **NO hacer** SEO agresivo hasta tener casos de éxito públicos (Mr. Trámite con clientes).
+- Renovación anual: evaluar cada año si LOGAN sigue siendo viable antes de pagar $48 USD.
+- Mariscos Quiroa y Mr. Trámite siguen siendo los productos comerciales prioritarios; logancorp.mx es el paraguas corporativo, no un producto.
+**Fecha:** 2026-08-13
+**Corrige:** ninguna (operacionaliza DEC-LOGAN-016, agrega la dimensión estratégica de "compra preventiva sin lanzamiento").
+
+#### DEC-LOGAN-019 — Confirmación de logancorp.mx como dominio corporativo (vs .com)
+**Problema:** El usuario intentó comprar `logancorp.com`, pero está registrado desde 1997 (no disponible). Quedan varias alternativas (logancorp.mx, logancorp.ai, logancorp.org, logancorp.io, logancorp.app, logancorp.dev, logancorp.studio, logancorpmx.com). ¿Cuál elegir?
+**Alternativas:**
+- (a) `logancorp.mx` — DEC-LOGAN-016 original, $11 USD, 100% mexicano, Neubox.
+- (b) `logancorp.ai` — más on-brand con enfoque IA, ~$80 USD/año.
+- (c) `logancorp.org` — serio, global, ~$15 USD.
+- (d) `logancorpmx.com` — variante .com con sufijo `mx`, ~$11 USD.
+**Decisión:** **(a) `logancorp.mx`** (confirmando DEC-LOGAN-016).
+**Justificación:**
+- **Alineación con mercado objetivo:** los clientes LOGAN son initially Mexicanos (Mr. Trámite, Mariscos Quiroa en Rosarito BC, Hércules Bro planeado para mercado mexicano). El TLD `.mx` refuerza identidad local.
+- **Costo eficiente:** $11 USD primer año vs $80 USD para `.ai`. La diferencia ($69 USD) es mejor invertida en créditos Z.ai o campaña Meta de Mr. Trámite.
+- **DEC-LOGAN-015 ya decidió Neubox** como proveedor — `.mx` es su TLD nativo, soporte directo en español, pago en MXN.
+- **El `.com` ya estaba tomado** — esta no es una decisión libre, es adaptación a la realidad del mercado de dominios.
+- **Prueba de los 10 años:** ✓ `.mx` sigue siendo válido como identidad mexicana en 10 años; incluso puede fortalecerse si el ecosistema LOGAN crece en LatAm.
+**Consecuencias:**
+- `logancorp.com` queda descartado (no disponible, registrado por terceros desde 1997).
+- El dominio canónico de LOGAN Corp será `logancorp.mx` (sin `www`).
+- Redirección automática: `www.logancorp.mx` → `logancorp.mx` (Vercel lo maneja).
+- Si en el futuro LOGAN busca mercado internacional (USA, LatAm no-MX), se puede complementar con `logancorp.ai` o `logancorp.io` sin cambiar el canonical mexicano.
+**Fecha:** 2026-08-13
+**Corrige:** DEC-LOGAN-016 parcialmente — confirma `.mx` (que ya estaba decidido) y descarta `.com` (que no estaba disponible).
+
 #### DEC-LOGAN-014 — Repositorio LOGAN público; repositorios de productos privados
 **Problema:** Si el repo `github.com/appsmx/logan` debe ser público o privado.
 **Alternativas:** (a) LOGAN repo público + productos privados; (b) todo privado; (c) todo público.
