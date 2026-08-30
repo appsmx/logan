@@ -1,15 +1,32 @@
 # Módulo Asistente IA — plantilla reutilizable
 
 > **Estado:** Especificación + código de referencia (DEC-LOGAN-011).
-> **Versión:** 1.0
-> **Fecha:** 2026-07-13
-> **Decisión asociada:** DEC-LOGAN-011 (los módulos viven en `templates/`).
+> **Versión:** 2.0 (multi-canal: WhatsApp + Facebook Messenger + Instagram DM)
+> **Fecha:** 2026-08-31 (v2.0) / 2026-07-13 (v1.0)
+> **Decisión asociada:** DEC-LOGAN-011 (los módulos viven en `templates/`) + DEC-MULTI-001/002/003.
+
+---
+
+## ⚠️ v2.0 Multi-canal disponible
+
+**Si tu producto necesita responder en Facebook Messenger, Instagram DM o varios canales a la vez, usa v2.0:**
+
+- **Especificación v2.0:** [`v2-multicanal/SPECIFICATION.md`](./v2-multicanal/SPECIFICATION.md)
+- **Plan de implementación:** [`v2-multicanal/PLAN.md`](./v2-multicanal/PLAN.md)
+- **Guía de setup Meta Business Suite multi-canal:** [`v2-multicanal/SETUP.md`](./v2-multicanal/SETUP.md)
+- **Diagramas de arquitectura (Mermaid):** [`v2-multicanal/ARQUITECTURA.md`](./v2-multicanal/ARQUITECTURA.md)
+
+v2.0 sustituye conceptualmente a v1.0 pero **no rompe backward compatibility**: los productos que instanciaron v1.0 (solo WhatsApp) pueden mantener su webhook `/api/whatsapp/webhook` y agregar el nuevo `/api/meta/webhook` en paralelo cuando estén listos para multi-canal.
+
+Las decisiones DEC-MULTI-001 (webhook unificado), DEC-MULTI-002 (agente IA sin cambios) y DEC-MULTI-003 (renombrado de tablas + campo `channel`) están documentadas en el PLAN v2.0.
+
+**v1.0 (solo WhatsApp) sigue vigente** para productos que solo necesitan WhatsApp. El archivo `SPECIFICATION.md` raíz es v1.0.
 
 ---
 
 ## ¿Qué es?
 
-El **Módulo Asistente IA** es una plantilla reutilizable que cualquier producto LOGAN OS puede instanciar para tener un **bot conversacional orientado al cliente**. No es LOGAN Core. No es un especialista interno. Es la cara que el producto le muestra a SUS clientes vía WhatsApp (y, opcionalmente, web chat).
+El **Módulo Asistente IA** es una plantilla reutilizable que cualquier producto LOGAN OS puede instanciar para tener un **bot conversacional orientado al cliente**. No es LOGAN Core. No es un especialista interno. Es la cara que el producto le muestra a SUS clientes vía WhatsApp (y, opcionalmente, web chat en v1.0; o WhatsApp + Facebook Messenger + Instagram DM en v2.0).
 
 La diferencia conceptual clave (Art. V — separación de responsabilidades):
 
