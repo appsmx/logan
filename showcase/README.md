@@ -10,13 +10,13 @@ Experiencia web inmersiva de una sola página para presentar el ecosistema LOGAN
 
 ## Productos enlazados (en vivo)
 
-| # | Producto | Enlace |
-|---|----------|--------|
-| 01 | Mr. Trámite | https://mrtramite.mx |
-| 02 | Mariscos Quiroa | https://mariscosquiroa.com |
-| 03 | Restaurant POS | https://restaurant-pos.vercel.app |
-| 04 | Hércules Bro | https://hercules-bro.vercel.app |
-| 05 | Productores Musicales | Próximamente → https://www.loganos.com |
+| # | Producto | Estado | Enlace |
+|---|----------|--------|--------|
+| 01 | Mr. Trámite | En vivo | https://mrtramite.mx |
+| 02 | Mariscos Quiroa | En vivo | https://mariscosquiroa.com |
+| 03 | Restaurant POS | Próximamente | https://www.loganos.com |
+| 04 | Hércules Bro | Próximamente | https://www.loganos.com |
+| 05 | Productores Musicales | Próximamente | https://www.loganos.com |
 
 ## Cómo verlo
 
