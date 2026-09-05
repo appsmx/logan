@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LOGAN — El sistema operativo de IA que opera negocios</title>
+<meta name="description" content="LOGAN OS: una inteligencia orquestada de 9 agentes que vende, construye, diseña, cobra y aprende. El futuro de operar un negocio." />
+<style>
+  :root{
+    --bg:#04050c;
+    --ink:#eaf0ff;
+    --muted:#8b93b8;
+    --cyan:#28e6ff;
+    --violet:#8b5cff;
+    --magenta:#ff3ea5;
+    --gold:#ffce54;
+    --green:#33ffb2;
+    --line:rgba(130,150,255,.12);
+    --grad:linear-gradient(120deg,var(--cyan),var(--violet) 50%,var(--magenta));
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  ::selection{background:rgba(139,92,255,.4);color:#fff}
+  a{color:inherit;text-decoration:none}
+
+  /* ---------- CUSTOM CURSOR ---------- */
+  .cursor,.cursor-dot{position:fixed;top:0;left:0;z-index:9999;pointer-events:none;border-radius:50%;mix-blend-mode:screen}
+  .cursor{width:34px;height:34px;border:1.5px solid var(--cyan);transform:translate(-50%,-50%);
+    transition:width .25s,height .25s,background .25s,border-color .25s}
+  .cursor.grow{width:64px;height:64px;background:rgba(40,230,255,.08);border-color:var(--violet)}
+  .cursor-dot{width:5px;height:5px;background:var(--cyan);transform:translate(-50%,-50%)}
+  @media(pointer:coarse){.cursor,.cursor-dot{display:none}}
+
+  /* ---------- PRELOADER ---------- */
+  #loader{position:fixed;inset:0;z-index:10000;background:var(--bg);display:grid;place-items:center;transition:opacity .8s,visibility .8s}
+  #loader.done{opacity:0;visibility:hidden}
+  .loader-inner{text-align:center}
+  .loader-mark{width:70px;height:70px;margin:0 auto 26px;border-radius:18px;background:var(--grad);
+    display:grid;place-items:center;font-size:32px;color:#fff;animation:spin 2.4s cubic-bezier(.6,.1,.3,.9) infinite;box-shadow:0 0 50px rgba(139,92,255,.6)}
+  @keyframes spin{0%{transform:rotate(0) scale(1)}50%{transform:rotate(180deg) scale(1.12)}100%{transform:rotate(360deg) scale(1)}}
+  .loader-word{letter-spacing:10px;font-weight:800;font-size:15px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .loader-bar{width:180px;height:2px;background:rgba(255,255,255,.1);margin:22px auto 0;border-radius:2px;overflow:hidden}
+  .loader-bar i{display:block;height:100%;width:0;background:var(--grad);animation:load 1.8s ease forwards}
+  @keyframes load{to{width:100%}}
+  .loader-pct{margin-top:12px;font-size:12px;color:var(--muted);letter-spacing:2px}
+
+  /* ---------- 3D SCENE CANVAS ---------- */
+  #scene{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse 80% 70% at 50% 45%,transparent 40%,rgba(4,5,12,.65) 100%)}
+  .noise{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.04;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  /* ---------- PROGRESS + NAV ---------- */
+  .progress{position:fixed;top:0;left:0;height:2px;width:0;z-index:60;background:var(--grad);box-shadow:0 0 16px var(--cyan)}
+  nav{position:fixed;top:0;left:0;right:0;z-index:55;display:flex;justify-content:space-between;align-items:center;
+    padding:22px 5vw;transition:padding .4s,background .4s}
+  nav.scrolled{padding:14px 5vw;background:rgba(4,5,12,.6);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:5px;font-size:17px}
+  .brand .m{width:30px;height:30px;border-radius:9px;background:var(--grad);display:grid;place-items:center;font-size:15px;color:#fff;
+    box-shadow:0 0 22px rgba(139,92,255,.55)}
+  .nav-links{display:flex;gap:34px;font-size:13px;letter-spacing:1px;color:var(--muted)}
+  .nav-links a{position:relative;transition:color .3s}
+  .nav-links a:hover{color:var(--ink)}
+  .nav-links a::after{content:"";position:absolute;left:0;bottom:-6px;width:0;height:1px;background:var(--grad);transition:width .3s}
+  .nav-links a:hover::after{width:100%}
+  @media(max-width:760px){.nav-links{display:none}}
+
+  /* ---------- LAYOUT ---------- */
+  main{position:relative;z-index:2}
+  section{padding:14vh 5vw;position:relative}
+  .wrap{max-width:1180px;margin:0 auto}
+  .kicker{display:inline-flex;align-items:center;gap:9px;font-size:11.5px;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);
+    border:1px solid var(--line);padding:8px 18px;border-radius:40px;background:rgba(255,255,255,.02);backdrop-filter:blur(6px)}
+  .kicker .d{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:blink 1.6s infinite}
+  @keyframes blink{50%{opacity:.3}}
+  h1{font-size:clamp(46px,9vw,124px);line-height:.95;font-weight:900;letter-spacing:-3px}
+  h2{font-size:clamp(32px,5.4vw,68px);line-height:1.02;font-weight:900;letter-spacing:-1.5px}
+  .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .outline{color:transparent;-webkit-text-stroke:1.4px rgba(234,240,255,.5)}
+  .lead{font-size:clamp(16px,1.7vw,20px);color:var(--muted);max-width:640px}
+
+  /* ---------- HERO ---------- */
+  .hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-top:14vh}
+  .hero h1{max-width:15ch;margin:26px 0}
+  .hero .sub{display:flex;gap:40px;flex-wrap:wrap;align-items:flex-end;margin-top:18px}
+  .cta{display:inline-flex;align-items:center;gap:12px;padding:17px 34px;border-radius:50px;background:var(--grad);color:#fff;
+    font-weight:700;font-size:15px;box-shadow:0 10px 40px rgba(139,92,255,.4);transition:transform .3s,box-shadow .3s}
+  .cta:hover{transform:translateY(-3px);box-shadow:0 16px 50px rgba(40,230,255,.5)}
+  .cta .arw{transition:transform .3s}.cta:hover .arw{transform:translateX(5px)}
+  .hero-foot{position:absolute;bottom:5vh;left:5vw;right:5vw;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
+  .live{display:flex;align-items:center;gap:10px;font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+  .live .pin{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green);animation:blink 1.4s infinite}
+  .scrollcue{font-size:11px;letter-spacing:3px;color:var(--muted);writing-mode:vertical-rl}
+
+  /* ---------- MARQUEE ---------- */
+  .marquee{overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:26px 0;background:rgba(255,255,255,.015);position:relative;z-index:2}
+  .marquee-track{display:flex;gap:60px;white-space:nowrap;width:max-content;animation:scrollx 26s linear infinite;font-size:clamp(22px,3vw,40px);font-weight:800;letter-spacing:-1px}
+  .marquee-track span{color:rgba(234,240,255,.14)}
+  .marquee-track b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  @keyframes scrollx{to{transform:translateX(-50%)}}
+
+  /* ---------- REVEAL ---------- */
+  .rv{opacity:0;transform:translateY(46px);transition:opacity 1s cubic-bezier(.2,.7,.2,1),transform 1s cubic-bezier(.2,.7,.2,1)}
+  .rv.in{opacity:1;transform:none}
+  .rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.2s}.rv.d3{transition-delay:.3s}.rv.d4{transition-delay:.4s}
+
+  /* ---------- MANIFESTO ---------- */
+  .manifesto{text-align:center}
+  .manifesto h2{max-width:16ch;margin:0 auto}
+  .manifesto .lead{margin:30px auto 0}
+
+  /* ---------- AGENTS ORBIT ---------- */
+  .agents-sec{position:relative}
+  .agent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;margin-top:56px}
+  .acard{position:relative;border:1px solid var(--line);border-radius:18px;padding:26px 22px;overflow:hidden;
+    background:linear-gradient(160deg,rgba(255,255,255,.04),rgba(255,255,255,.01));transition:transform .5s,border-color .5s;cursor:pointer}
+  .acard::after{content:"";position:absolute;width:220px;height:220px;background:radial-gradient(circle,rgba(139,92,255,.25),transparent 70%);
+    top:var(--my,50%);left:var(--mx,50%);transform:translate(-50%,-50%);opacity:0;transition:opacity .4s;pointer-events:none}
+  .acard:hover{transform:translateY(-6px);border-color:rgba(40,230,255,.5)}
+  .acard:hover::after{opacity:1}
+  .acard .ico{width:48px;height:48px;border-radius:13px;display:grid;place-items:center;margin-bottom:16px;
+    background:linear-gradient(135deg,rgba(40,230,255,.16),rgba(139,92,255,.16));border:1px solid var(--line)}
+  .acard .ico svg{width:24px;height:24px;stroke:var(--cyan);fill:none;stroke-width:1.7}
+  .acard h3{font-size:18px;margin-bottom:6px;position:relative;z-index:1}
+  .acard p{font-size:13.5px;color:var(--muted);position:relative;z-index:1}
+  .acard .idx{position:absolute;top:18px;right:20px;font-size:12px;color:rgba(234,240,255,.25);font-weight:700;letter-spacing:1px}
+
+  /* ---------- PIPELINE / DEMO ---------- */
+  .pipe{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center;margin-top:50px}
+  @media(max-width:860px){.pipe{grid-template-columns:1fr}}
+  .terminal{border:1px solid var(--line);border-radius:18px;background:rgba(8,10,22,.75);backdrop-filter:blur(10px);overflow:hidden;
+    box-shadow:0 30px 80px rgba(0,0,0,.5)}
+  .term-bar{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .term-bar i{width:11px;height:11px;border-radius:50%;display:inline-block}
+  .term-bar .r{background:#ff5f57}.term-bar .y{background:#febc2e}.term-bar .g{background:#28c840}
+  .term-bar span{margin-left:10px;font-size:12px;color:var(--muted);letter-spacing:1px}
+  .term-body{padding:22px;font-family:'SF Mono',ui-monospace,'Cascadia Code',monospace;font-size:13.5px;min-height:340px;line-height:1.9}
+  .term-body .u{color:var(--cyan)}
+  .term-body .tag{color:var(--violet);font-weight:700}
+  .term-body .ok{color:var(--green)}
+  .term-body .mut{color:var(--muted)}
+  .term-body .hip{color:var(--gold)}
+  .cursor-blink{display:inline-block;width:8px;height:16px;background:var(--cyan);vertical-align:middle;animation:cb .9s steps(1) infinite}
+  @keyframes cb{50%{opacity:0}}
+  .pipe-copy h2{margin-bottom:18px}
+  .loop-mini{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+  .loop-mini span{font-size:12px;padding:8px 15px;border:1px solid var(--line);border-radius:30px;color:var(--muted);
+    background:rgba(255,255,255,.02)}
+  .loop-mini span b{color:var(--gold)}
+
+  /* ---------- PRODUCTS SHOWCASE ---------- */
+  .prods{margin-top:56px;display:flex;flex-direction:column;gap:2px}
+  .prow{display:grid;grid-template-columns:80px 1.4fr 1.6fr 120px;gap:24px;align-items:center;padding:34px 12px;
+    border-top:1px solid var(--line);transition:background .4s,padding .4s;cursor:pointer;position:relative;color:inherit;text-decoration:none}
+  .prow:last-child{border-bottom:1px solid var(--line)}
+  .prow:hover{background:rgba(139,92,255,.06);padding-left:26px}
+  .prow .pnum{font-size:13px;color:var(--muted);font-weight:700}
+  .prow .pname{font-size:clamp(22px,3vw,34px);font-weight:900;letter-spacing:-1px}
+  .prow:hover .pname{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .prow .pdesc{font-size:14px;color:var(--muted)}
+  .prow .ptag{justify-self:end;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--green);
+    border:1px solid rgba(51,255,178,.3);padding:5px 12px;border-radius:20px;background:rgba(51,255,178,.08);white-space:nowrap}
+  .prow .ptag-soon{color:var(--gold);border-color:rgba(255,206,84,.3);background:rgba(255,206,84,.08)}
+  .prow .go{position:absolute;right:12px;opacity:0;transform:translateX(-10px);transition:.4s;font-size:22px;color:var(--cyan)}
+  @media(max-width:860px){.prow{grid-template-columns:40px 1fr;gap:8px}.prow .pdesc,.prow .ptag{grid-column:2}}
+
+  /* ---------- STATS ---------- */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:2px;margin-top:56px;border:1px solid var(--line);border-radius:20px;overflow:hidden}
+  .stat{padding:44px 26px;text-align:center;background:rgba(255,255,255,.015);transition:background .4s}
+  .stat:hover{background:rgba(139,92,255,.07)}
+  .stat .n{font-size:clamp(40px,5vw,60px);font-weight:900;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .l{font-size:12.5px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:6px}
+
+  /* ---------- CTA FINAL ---------- */
+  .final{text-align:center;padding:20vh 5vw}
+  .final h2{max-width:18ch;margin:0 auto 26px}
+  .final .warn{margin-top:30px;color:var(--gold);font-size:14px;letter-spacing:.5px}
+  .final .big-cta{margin-top:40px;display:inline-flex}
+
+  footer{position:relative;z-index:2;border-top:1px solid var(--line);padding:50px 5vw;display:flex;justify-content:space-between;
+    align-items:center;flex-wrap:wrap;gap:20px;color:var(--muted);font-size:13px}
+  footer .brand{color:var(--ink)}
+  .disc{position:relative;z-index:2;padding:0 5vw 40px;text-align:center;font-size:11px;color:#4a5178;max-width:860px;margin:0 auto}
+
+  /* ---------- SOUND TOGGLE ---------- */
+  #sound{position:fixed;bottom:26px;right:26px;z-index:70;display:flex;align-items:center;gap:11px;
+    padding:11px 18px 11px 15px;border-radius:40px;border:1px solid var(--line);background:rgba(8,10,22,.6);
+    backdrop-filter:blur(14px);cursor:pointer;color:var(--muted);font-size:11.5px;letter-spacing:2px;text-transform:uppercase;
+    transition:color .3s,border-color .3s,transform .3s}
+  #sound:hover{color:var(--ink);border-color:rgba(40,230,255,.5);transform:translateY(-2px)}
+  #sound.on{color:var(--ink);border-color:rgba(40,230,255,.4)}
+  .eq{display:flex;align-items:flex-end;gap:2.5px;height:16px}
+  .eq b{width:2.5px;height:5px;background:var(--muted);border-radius:2px;transition:background .3s}
+  #sound.on .eq b{background:var(--cyan);animation:eq 1s ease-in-out infinite}
+  #sound.on .eq b:nth-child(2){animation-delay:.15s}
+  #sound.on .eq b:nth-child(3){animation-delay:.3s}
+  #sound.on .eq b:nth-child(4){animation-delay:.45s}
+  @keyframes eq{0%,100%{height:4px}50%{height:15px}}
+  @media(max-width:760px){#sound{bottom:16px;right:16px;padding:10px 14px}#sound .lbl{display:none}}
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-dot" id="cursorDot"></div>
+
+<!-- PRELOADER -->
+<div id="loader">
+  <div class="loader-inner">
+    <div class="loader-mark">◆</div>
+    <div class="loader-word">L&nbsp;O&nbsp;G&nbsp;A&nbsp;N</div>
+    <div class="loader-bar"><i></i></div>
+    <div class="loader-pct" id="pct">INICIALIZANDO NÚCLEO · 0%</div>
+  </div>
+</div>
+
+<!-- SOUND TOGGLE -->
+<div id="sound" data-hover title="Activar/silenciar sonido">
+  <div class="eq"><b></b><b></b><b></b><b></b></div>
+  <span class="lbl" id="soundLbl">Sonido</span>
+</div>
+
+<!-- 3D NEURAL SCENE -->
+<canvas id="scene"></canvas>
+<div class="vignette"></div>
+<div class="noise"></div>
+<div class="progress" id="progress"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="brand"><div class="m">◆</div>LOGAN</div>
+  <div class="nav-links">
+    <a href="#sistema" data-hover>Sistema</a>
+    <a href="#agentes" data-hover>Agentes</a>
+    <a href="#demo" data-hover>En vivo</a>
+    <a href="#productos" data-hover>Productos</a>
+    <a href="#contacto" data-hover>Contacto</a>
+  </div>
+</nav>
+
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap">
+      <div class="kicker rv"><span class="d"></span> Sistema operativo de inteligencia · v1.0</div>
+      <h1 class="rv d1">No es una herramienta.<br>Es una <span class="grad">inteligencia</span> que <span class="outline">opera</span> tu negocio.</h1>
+      <div class="sub">
+        <p class="lead rv d2">LOGAN orquesta 9 agentes de IA que venden, construyen, diseñan, cobran, atienden y aprenden — bajo una sola voz. Un organismo digital que trabaja mientras tú descansas.</p>
+        <a href="#contacto" class="cta rv d3" data-hover>Entrar al futuro <span class="arw"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+      </div>
+    </div>
+    <div class="hero-foot">
+      <div class="live rv d4"><span class="pin"></span> 5 industrias operando en vivo</div>
+      <div class="scrollcue">SCROLL ▾</div>
+    </div>
+  </section>
+
+  <!-- MARQUEE -->
+  <div class="marquee">
+    <div class="marquee-track">
+      <span>VENDE <b>·</b> CONSTRUYE <b>·</b> DISEÑA <b>·</b> COBRA <b>·</b> ATIENDE <b>·</b> APRENDE <b>·</b></span>
+      <span>VENDE <b>·</b> CONSTRUYE <b>·</b> DISEÑA <b>·</b> COBRA <b>·</b> ATIENDE <b>·</b> APRENDE <b>·</b></span>
+    </div>
+  </div>
+
+  <!-- MANIFESTO -->
+  <section id="sistema" class="manifesto">
+    <div class="wrap">
+      <div class="kicker rv">El cambio de paradigma</div>
+      <h2 class="rv d1" style="margin-top:26px">Contratabas equipos.<br>Ahora <span class="grad">despiertas un sistema</span>.</h2>
+      <p class="lead rv d2">Un negocio necesita ventas, tecnología, diseño, finanzas, legal y soporte. Antes eso eran seis nóminas y meses de coordinación. LOGAN lo condensa en una conversación: pides, y el sistema entero se activa, se coordina y entrega — en minutos, no en trimestres.</p>
+    </div>
+  </section>
+
+  <!-- AGENTS -->
+  <section id="agentes" class="agents-sec">
+    <div class="wrap">
+      <div class="kicker rv">La constelación</div>
+      <h2 class="rv d1" style="margin-top:24px">Un cerebro. <span class="grad">Nueve mentes</span> especializadas.</h2>
+      <div class="agent-grid">
+        <div class="acard rv" data-hover><span class="idx">00</span><div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/></svg></div><h3>Core</h3><p>El orquestador. Entiende, decide y unifica todo en una sola voz.</p></div>
+        <div class="acard rv d1" data-hover><span class="idx">01</span><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 11l14-6v14L3 13zM17 7a4 4 0 010 8"/></svg></div><h3>Marketing</h3><p>Estrategia, campañas y copy que convierten.</p></div>
+        <div class="acard rv d2" data-hover><span class="idx">02</span><div class="ico"><svg viewBox="0 0 24 24"><path d="M9 8l-4 4 4 4M15 8l4 4-4 4"/></svg></div><h3>Dev</h3><p>Código de producción: web, app y sistemas.</p></div>
+        <div class="acard rv d3" data-hover><span class="idx">03</span><div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 000 18c1 0 1.5-.8 1.5-1.5 0-.8-.6-1.2-.6-2 0-.8.7-1.5 1.5-1.5H16a5 5 0 005-5c0-4-4-8-9-8z"/><circle cx="8" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16" cy="11" r="1"/></svg></div><h3>Design</h3><p>Identidad y experiencias que enamoran.</p></div>
+        <div class="acard rv" data-hover><span class="idx">04</span><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div><h3>Analytics</h3><p>Mide, verifica y revela qué funciona de verdad.</p></div>
+        <div class="acard rv d1" data-hover><span class="idx">05</span><div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1 1-1.5 2.5-1.5s2.5.6 2.5 1.6c0 2-5 1-5 3 0 1 1 1.6 2.5 1.6s2.5-.5 2.5-1.5"/></svg></div><h3>Finance</h3><p>Precios, viabilidad y salud financiera.</p></div>
+        <div class="acard rv d2" data-hover><span class="idx">06</span><div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 7h14M7 7l-3 6a3 3 0 006 0zM17 7l-3 6a3 3 0 006 0z"/></svg></div><h3>Legal</h3><p>Términos, contratos y cumplimiento.</p></div>
+        <div class="acard rv d3" data-hover><span class="idx">07</span><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 13v-1a8 8 0 0116 0v1M4 13a2 2 0 012 2v2a2 2 0 01-4 0v-2a2 2 0 012-2zM20 13a2 2 0 00-2 2v2a2 2 0 004 0v-2a2 2 0 00-2-2z"/></svg></div><h3>Support</h3><p>Atención 24/7 en la voz de tu marca.</p></div>
+        <div class="acard rv" data-hover><span class="idx">08</span><div class="ico"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></svg></div><h3>Memory</h3><p>Recuerda todo. Nunca empieza de cero.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIVE DEMO / PIPELINE -->
+  <section id="demo">
+    <div class="wrap">
+      <div class="kicker rv">Míralo pensar</div>
+      <div class="pipe">
+        <div class="pipe-copy rv d1">
+          <h2>Una orden.<br><span class="grad">El sistema entero</span> responde.</h2>
+          <p class="lead">Tú hablas con LOGAN como con una persona. Detrás, Core delega a los especialistas, integra sus entregables y valida cada decisión contra su Constitución — dejando una <b style="color:var(--gold)">hipótesis medible</b> que lo hace más inteligente con cada iteración.</p>
+          <div class="loop-mini">
+            <span>1 · Decide</span><span>2 · Registra <b>hipótesis</b></span><span>3 · Mide</span><span>4 · Aprende</span><span>5 · Mejora</span>
+          </div>
+        </div>
+        <div class="terminal rv d2">
+          <div class="term-bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>LOGAN OS · core@loganos.com</span></div>
+          <div class="term-body" id="term"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRODUCTS -->
+  <section id="productos">
+    <div class="wrap">
+      <div class="kicker rv">Operando en el mundo real</div>
+      <h2 class="rv d1" style="margin-top:24px">Negocios <span class="grad">construidos y operados</span> por LOGAN.</h2>
+      <div class="prods">
+        <a class="prow rv" data-hover href="https://mrtramite.mx" target="_blank" rel="noopener"><div class="pnum">01</div><div class="pname">Mr. Trámite</div><div class="pdesc">Gestoría de IA que capta, califica y cobra trámites sola.</div><div class="ptag">En vivo</div><div class="go"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></a>
+        <a class="prow rv" data-hover href="https://mariscosquiroa.com" target="_blank" rel="noopener"><div class="pnum">02</div><div class="pname">Mariscos Quiroa</div><div class="pdesc">E-commerce + agente que cotiza mayoreo por WhatsApp 24/7.</div><div class="ptag">En vivo</div><div class="go"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></a>
+        <a class="prow rv" data-hover href="https://restaurant-pos.vercel.app" target="_blank" rel="noopener"><div class="pnum">03</div><div class="pname">Restaurant POS</div><div class="pdesc">Punto de venta multi-sucursal en la nube, en tiempo real.</div><div class="ptag">En vivo</div><div class="go"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></a>
+        <a class="prow rv" data-hover href="https://hercules-bro.vercel.app" target="_blank" rel="noopener"><div class="pnum">04</div><div class="pname">Hércules Bro</div><div class="pdesc">Recepcionista de IA que convierte mensajes en citas.</div><div class="ptag">En vivo</div><div class="go"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></a>
+        <a class="prow rv" data-hover href="https://www.loganos.com" target="_blank" rel="noopener"><div class="pnum">05</div><div class="pname">Productores Musicales</div><div class="pdesc">Catálogo, licencias y pagos de beats en piloto automático.</div><div class="ptag ptag-soon">Próximamente</div><div class="go"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section>
+    <div class="wrap">
+      <div class="kicker rv">El poder en números</div>
+      <div class="stats">
+        <div class="stat rv"><div class="n" data-count="9">0</div><div class="l">Agentes</div></div>
+        <div class="stat rv d1"><div class="n" data-count="24" data-suffix="/7">0</div><div class="l">Sin descanso</div></div>
+        <div class="stat rv d2"><div class="n" data-count="70" data-suffix="×">0</div><div class="l">Más veloz</div></div>
+        <div class="stat rv d3"><div class="n" data-count="5">0</div><div class="l">Industrias</div></div>
+        <div class="stat rv d4"><div class="n" data-count="0" data-suffix="₴">∞</div><div class="l">Límite de escala</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section id="contacto" class="final">
+    <div class="wrap">
+      <div class="kicker rv"><span class="d"></span> El futuro no espera</div>
+      <h2 class="rv d1" style="margin-top:26px">Tu competencia ya despertó a su sistema.<br><span class="grad">¿Y tú?</span></h2>
+      <p class="lead rv d2" style="margin:0 auto">Cada día operando "a mano" es dinero que se fuga y terreno que cedes. Cambiar eso empieza con una sola conversación.</p>
+      <a href="mailto:hola@loganos.com" class="cta big-cta rv d3" data-hover>Agenda tu demo <span class="arw"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+      <p class="warn rv d4">/!\ No adoptar IA no es ahorrar. Es pagar el costo de quedarte atrás — cada mes.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="brand"><div class="m">◆</div>LOGAN OS</div>
+  <div>Learning · Organization · Governance · Architecture · Navigation</div>
+  <div><a href="https://www.loganos.com" data-hover>www.loganos.com</a> · <a href="mailto:hola@loganos.com" data-hover>hola@loganos.com</a></div>
+</footer>
+<p class="disc">Experiencia showcase de LOGAN OS. Las métricas, nombres de producto y elementos visuales tienen fines demostrativos para comunicar el potencial del ecosistema; los resultados reales varían por negocio.</p>
+
+<script>
+/* ============ PRELOADER ============ */
+const pct=document.getElementById('pct');let p=0;
+const pit=setInterval(()=>{p+=Math.random()*16;if(p>=100){p=100;clearInterval(pit);}
+  pct.textContent='INICIALIZANDO NÚCLEO · '+Math.floor(p)+'%';},130);
+window.addEventListener('load',()=>setTimeout(()=>{document.getElementById('loader').classList.add('done');startReveals();},1900));
+
+/* ============ CUSTOM CURSOR ============ */
+const cur=document.getElementById('cursor'),dot=document.getElementById('cursorDot');
+let cx=innerWidth/2,cy=innerHeight/2,tx=cx,ty=cy;
+addEventListener('mousemove',e=>{tx=e.clientX;ty=e.clientY;dot.style.transform=`translate(${tx}px,${ty}px) translate(-50%,-50%)`;});
+(function follow(){cx+=(tx-cx)*.18;cy+=(ty-cy)*.18;cur.style.transform=`translate(${cx}px,${cy}px) translate(-50%,-50%)`;requestAnimationFrame(follow);})();
+document.querySelectorAll('[data-hover]').forEach(el=>{el.addEventListener('mouseenter',()=>cur.classList.add('grow'));el.addEventListener('mouseleave',()=>cur.classList.remove('grow'));});
+/* card glow follows mouse */
+document.querySelectorAll('.acard').forEach(c=>c.addEventListener('mousemove',e=>{const r=c.getBoundingClientRect();c.style.setProperty('--mx',(e.clientX-r.left)+'px');c.style.setProperty('--my',(e.clientY-r.top)+'px');}));
+
+/* ============ NAV + PROGRESS ============ */
+const nav=document.getElementById('nav'),prog=document.getElementById('progress');
+addEventListener('scroll',()=>{const h=document.documentElement,s=h.scrollTop/(h.scrollHeight-h.clientHeight);
+  prog.style.width=(s*100)+'%';nav.classList.toggle('scrolled',h.scrollTop>60);});
+
+/* ============ REVEAL + COUNTERS ============ */
+function startReveals(){
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.16});
+  document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+  const co=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){count(e.target);co.unobserve(e.target);}});},{threshold:.6});
+  document.querySelectorAll('[data-count]').forEach(el=>co.observe(el));
+  termType();
+}
+function count(el){const t=+el.dataset.count,sfx=el.dataset.suffix||'';if(t===0){el.textContent='∞';return;}
+  let c=0;const it=setInterval(()=>{c+=t/50;if(c>=t){c=t;clearInterval(it);}el.textContent=Math.round(c)+sfx;},20);}
+
+/* ============ TERMINAL TYPING ============ */
+const lines=[
+ {t:'<span class="u">tú &gt;</span> necesito vender más este mes',d:40},
+ {t:'<span class="mut">core &gt; analizando intención · leyendo memoria del negocio…</span>',d:20},
+ {t:'<span class="tag">-&gt; delega</span> Marketing · Design · Analytics',d:20},
+ {t:'<span class="mut">marketing &gt; 2 campañas Meta + 3 variantes de copy</span>',d:14},
+ {t:'<span class="mut">design &gt; 4 creatividades generadas</span>',d:14},
+ {t:'<span class="hip">◇ hipótesis HIP-042 · "riesgo percibido menor = +18% CTR"</span>',d:20},
+ {t:'<span class="mut">core &gt; validando contra Constitución… </span><span class="ok">[OK] aprobado</span>',d:20},
+ {t:'<span class="ok">[OK] entregado en 47s</span> <span class="mut">— una sola voz, un solo LOGAN</span>',d:30},
+];
+function termType(){
+  const term=document.getElementById('term');if(term.dataset.done)return;term.dataset.done=1;
+  let li=0;
+  function nextLine(){
+    if(li>=lines.length){const c=document.createElement('span');c.className='cursor-blink';term.appendChild(c);return;}
+    const line=lines[li],row=document.createElement('div');term.appendChild(row);
+    const raw=line.t;let i=0;
+    (function typeChar(){
+      row.innerHTML=raw.slice(0,i)+'<span class="cursor-blink"></span>';
+      i++;
+      if(i<=raw.length){setTimeout(typeChar,line.d);}
+      else{row.innerHTML=raw;li++;setTimeout(nextLine,380);}
+    })();
+  }
+  nextLine();
+}
+
+/* ============ 3D NEURAL SCENE (pure canvas) ============ */
+const cv=document.getElementById('scene'),ctx=cv.getContext('2d');
+let W,H,DPR=Math.min(devicePixelRatio||1,2);
+function resize(){W=cv.width=innerWidth*DPR;H=cv.height=innerHeight*DPR;cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';}
+resize();addEventListener('resize',resize);
+
+const COLORS=['#28e6ff','#8b5cff','#ff3ea5'];
+const N=window.innerWidth<760?70:130;
+const nodes=[];
+for(let i=0;i<N;i++){
+  nodes.push({
+    x:(Math.random()-.5)*2, y:(Math.random()-.5)*2, z:Math.random()*2-1,
+    r:Math.random()*1.6+.6,
+    vx:(Math.random()-.5)*.0007,vy:(Math.random()-.5)*.0007,vz:(Math.random()-.5)*.0007,
+    c:COLORS[Math.floor(Math.random()*3)]
+  });
+}
+let rot=0, scrollY=0, mX=0,mY=0;
+addEventListener('scroll',()=>{scrollY=window.scrollY;});
+addEventListener('mousemove',e=>{mX=(e.clientX/innerWidth-.5);mY=(e.clientY/innerHeight-.5);});
+
+function project(n,ry,rx){
+  // rotate around Y then X
+  let x=n.x*Math.cos(ry)-n.z*Math.sin(ry);
+  let z=n.x*Math.sin(ry)+n.z*Math.cos(ry);
+  let y=n.y*Math.cos(rx)-z*Math.sin(rx);
+  z=n.y*Math.sin(rx)+z*Math.cos(rx);
+  const fov=2.4, scale=fov/(fov+z+2);
+  return {sx:W/2+x*W*.34*scale, sy:H/2+y*H*.34*scale, scale, z};
+}
+function frame(){
+  ctx.clearRect(0,0,W,H);
+  rot+=0.0016;
+  const ry=rot + mX*.6, rx= (scrollY*0.0006) + mY*.4;
+  // update + project
+  const pts=nodes.map(n=>{
+    n.x+=n.vx;n.y+=n.vy;n.z+=n.vz;
+    ['x','y','z'].forEach(a=>{if(n[a]>1)n[a]=-1;if(n[a]<-1)n[a]=1;});
+    return {p:project(n,ry,rx),n};
+  });
+  // connections
+  for(let i=0;i<pts.length;i++){
+    for(let j=i+1;j<pts.length;j++){
+      const dx=pts[i].p.sx-pts[j].p.sx, dy=pts[i].p.sy-pts[j].p.sy;
+      const d=Math.hypot(dx,dy);
+      const maxD=150*DPR;
+      if(d<maxD){
+        const a=(1-d/maxD)*.5*Math.min(pts[i].p.scale,pts[j].p.scale);
+        ctx.strokeStyle=`rgba(120,150,255,${a})`;
+        ctx.lineWidth=DPR*.5;
+        ctx.beginPath();ctx.moveTo(pts[i].p.sx,pts[i].p.sy);ctx.lineTo(pts[j].p.sx,pts[j].p.sy);ctx.stroke();
+      }
+    }
+  }
+  // nodes (sort by depth for glow)
+  pts.sort((a,b)=>a.p.z-b.p.z);
+  pts.forEach(({p,n})=>{
+    const r=n.r*p.scale*DPR*2.2;
+    const g=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,r*4);
+    g.addColorStop(0,n.c);g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g;ctx.globalAlpha=.9*p.scale;
+    ctx.beginPath();ctx.arc(p.sx,p.sy,r*4,0,7);ctx.fill();
+    ctx.globalAlpha=1;ctx.fillStyle=n.c;
+    ctx.beginPath();ctx.arc(p.sx,p.sy,r,0,7);ctx.fill();
+  });
+  requestAnimationFrame(frame);
+}
+frame();
+
+/* ============ CINEMATIC AUDIO (Web Audio API, no files) ============ */
+const Sound=(()=>{
+  let ctx,master,droneGain,on=false,started=false,noiseSrc,filt,lfo;
+  const btn=document.getElementById('sound'),lbl=document.getElementById('soundLbl');
+
+  function build(){
+    ctx=new (window.AudioContext||window.webkitAudioContext)();
+    master=ctx.createGain();master.gain.value=0.0001;master.connect(ctx.destination);
+
+    // --- ambient drone: two detuned oscillators through a soft lowpass, slow LFO on the cutoff ---
+    droneGain=ctx.createGain();droneGain.gain.value=0.045;
+    filt=ctx.createBiquadFilter();filt.type='lowpass';filt.frequency.value=520;filt.Q.value=6;
+    droneGain.connect(filt);filt.connect(master);
+    [55,82.4,110].forEach((f,i)=>{           // A1, ~E2, A2 — deep, calm chord
+      const o=ctx.createOscillator();o.type=i===2?'sine':'sawtooth';
+      o.frequency.value=f;o.detune.value=(i-1)*6;
+      const g=ctx.createGain();g.gain.value=i===0?0.6:i===1?0.25:0.4;
+      o.connect(g);g.connect(droneGain);o.start();
+    });
+    // slow shimmer LFO moving the filter cutoff
+    lfo=ctx.createOscillator();lfo.frequency.value=0.06;
+    const lfoGain=ctx.createGain();lfoGain.gain.value=260;
+    lfo.connect(lfoGain);lfoGain.connect(filt.frequency);lfo.start();
+
+    // subtle high air noise bed
+    const buf=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate);
+    const dt=buf.getChannelData(0);for(let i=0;i<dt.length;i++)dt[i]=(Math.random()*2-1)*0.5;
+    noiseSrc=ctx.createBufferSource();noiseSrc.buffer=buf;noiseSrc.loop=true;
+    const nf=ctx.createBiquadFilter();nf.type='highpass';nf.frequency.value=6000;
+    const ng=ctx.createGain();ng.gain.value=0.006;
+    noiseSrc.connect(nf);nf.connect(ng);ng.connect(master);noiseSrc.start();
+    started=true;
+  }
+  function fade(to,t=0.8){if(!ctx)return;master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setTargetAtTime(to,ctx.currentTime,t/3);}
+
+  // one-shot blip (hover / reveal / click)
+  function blip(freq=880,dur=0.12,type='sine',vol=0.06){
+    if(!on||!ctx)return;
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    o.type=type;o.frequency.value=freq;
+    g.gain.setValueAtTime(0,ctx.currentTime);
+    g.gain.linearRampToValueAtTime(vol,ctx.currentTime+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+dur);
+    o.connect(g);g.connect(master);o.start();o.stop(ctx.currentTime+dur+0.02);
+  }
+  function tick(){ // tiny granular scroll tick
+    if(!on||!ctx)return;
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    o.type='triangle';o.frequency.value=1200+Math.random()*400;
+    g.gain.setValueAtTime(0.02,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.05);
+    o.connect(g);g.connect(master);o.start();o.stop(ctx.currentTime+0.06);
+  }
+  function toggle(){
+    if(!started)build();
+    if(ctx.state==='suspended')ctx.resume();
+    on=!on;
+    btn.classList.toggle('on',on);
+    lbl.textContent=on?'Sonido on':'Sonido';
+    fade(on?0.9:0.0001);
+    if(on)blip(660,0.18,'sine',0.05);
+  }
+  btn.addEventListener('click',toggle);
+  return {blip,tick,isOn:()=>on};
+})();
+
+/* hook audio into interactions */
+document.querySelectorAll('[data-hover]').forEach(el=>{
+  el.addEventListener('mouseenter',()=>Sound.blip(1046,0.09,'sine',0.035));
+});
+document.querySelectorAll('.acard, .prow').forEach(el=>{
+  el.addEventListener('mouseenter',()=>Sound.blip(1318,0.08,'triangle',0.03));
+});
+// scroll ticks (throttled)
+let lastTick=0;
+addEventListener('scroll',()=>{const n=performance.now();if(n-lastTick>90){lastTick=n;Sound.tick();}},{passive:true});
+// swell when a section reveals
+const swellIO=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){Sound.blip(523,0.5,'sine',0.045);swellIO.unobserve(e.target);}});},{threshold:.5});
+document.querySelectorAll('section h2').forEach(el=>swellIO.observe(el));
+</script>
+</body>
+</html>
