@@ -1,7 +1,9 @@
-# LOGAN — Showcase web
+# LOGAN — Showcase web (estudio digital)
 
-Experiencia web inmersiva de una sola página para presentar el ecosistema LOGAN OS
-(los 9 agentes, el bucle de hipótesis y los productos en vivo).
+Experiencia web inmersiva de una sola página para **vender servicios de creación de
+sitios y productos digitales**. Posiciona a LOGAN como el **motor de IA propio** que usamos
+para construir el proyecto del cliente — no como un producto SaaS que el cliente opera.
+El cliente contrata el resultado (su web/plataforma); nosotros ponemos la tecnología.
 
 - **Archivo:** [`index.html`](./index.html) — autónomo, sin dependencias externas ni build.
 - **Stack:** HTML + CSS + JS vanilla. Escena 3D neural en `<canvas>` puro, scroll cinemático,
