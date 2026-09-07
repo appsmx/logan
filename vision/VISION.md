@@ -1009,4 +1009,33 @@ El usuario confirma:
 
 **Próximo paso (esta sesión):** construir LOGAN Core (Etapa 2). Especificación en §14. Criterio de salida en §14.4. La app sigue siendo prototipo (DEC-LOGAN-008) — la interacción con Core es vía `POST /api/core` (testeable con curl), no con UI nueva.
 
+#### DEC-LOGAN-020 — Expansión del catálogo a ERPs verticales para PYMES, con facturación CFDI vía PAC integrado
+**Problema:** El mercado mexicano de PYMES demanda ERPs "todo en uno" (CRM + POS + web + asistente + automatizaciones + multi-sucursal + facturación), vendidos por competidores a precios de ~$20,000–$150,000 MXN. LOGAN ya construyó de forma dispersa casi todas esas piezas (POS multi-tenant en `restaurant-pos`, generación de webs, asistentes de IA, automatizaciones con tools). ¿Debe LOGAN formalizar la creación de ERPs como línea de servicio? ¿Y cómo resolver la única pieza que le falta —la facturación fiscal CFDI 4.0/SAT— sin volverse un proyecto de años ni requerir que el operador sea contador?
+**Alternativas:**
+- (a) No entrar a ERPs — mantener el catálogo actual (webs, bots, POS aislado).
+- (b) Construir un ERP monolítico genérico tipo SAP/Odoo — competir en profundidad enterprise.
+- (c) **ERPs verticales por giro para PYMES**, ensamblados con IA a partir de módulos reutilizables, con facturación resuelta **integrando un PAC** (no construyendo el timbrado propio).
+**Decisión:** **(c)** — LOGAN ofrece **ERPs verticales por giro** (comercio, distribuidora, taller, clínica, etc.) ensamblados a partir de módulos reutilizables. La **facturación CFDI 4.0 se resuelve integrando un PAC** con buena API para desarrolladores y modelo multi-RFC (candidato principal: **Facturapi**; alternativa: **Facturama**). La facturación se vende como **módulo premium/add-on**, no incluido por defecto.
+**Justificación:**
+- **Aprovecha activos existentes:** LOGAN ya cubre ~8–9 de las 10 funciones que vende la competencia. El POS multi-tenant (`restaurant-pos`) es un ERP-lite comprobado. La expansión es evolución, no salto al vacío (Art. III — simplicidad).
+- **No competir donde se pierde:** un ERP monolítico enterprise (opción b) es una guerra perdida contra SAP/Odoo. El diferenciador de LOGAN es la **velocidad de generación + personalización por IA** y la especialización **por giro** — no la profundidad enterprise.
+- **CFDI vía PAC, no propio:** construir el timbrado desde cero es el mayor riesgo técnico (reglas del SAT, catálogos oficiales, cambios normativos, responsabilidad legal). Integrar un PAC (Facturapi/Facturama) lo convierte en un problema de **integración de API**, que es justo lo que LOGAN domina. El PAC —certificado por el SAT— asume el cumplimiento normativo.
+- **No requiere que el operador sea contador:** LOGAN provee la **tecnología** (conectar el sistema al PAC). La **responsabilidad fiscal** es del negocio y su contador (RFC, CSD, régimen). Línea clara: LOGAN NO da asesoría fiscal/contable; remite esas dudas al contador del cliente.
+- **Facturación como add-on:** muchos negocios operan el ERP sin facturar al inicio. Vender la facturación como módulo premium permite empezar a vender el ERP-lite YA (Fase 1) y capitalizar el CFDI como upsell recurrente (Fase 2).
+- **Prueba de los 10 años:** ✓ La demanda de digitalización de PYMES mexicanas y el mandato de facturación electrónica del SAT son estructurales y crecientes.
+**Ruta de implementación por fases:**
+1. **Fase 1 — ERP-lite modular:** generalizar `restaurant-pos` a base reutilizable (inventario + ventas + clientes/CRM + caja + multi-sucursal). ~80% ya existe. Vendible sin facturación.
+2. **Fase 2 — Módulo de facturación CFDI 4.0** integrando el PAC elegido (multi-RFC, para operar como SaaS de múltiples clientes bajo el modelo reseller `{cliente}.loganos.com`).
+3. **Fase 3 — Módulo contable básico** (ingresos/egresos), sin partida doble completa aún.
+4. **Fase 4 — Biblioteca de módulos por giro + RBAC** (permisos granulares por módulo) para ensamblar ERPs rápido.
+5. **Fase 5 —** Contabilidad completa / nómina, solo si el mercado lo demanda.
+**Consecuencias:**
+- Se agrega "ERPs verticales para PYMES" al catálogo de servicios de LOGAN (showcase).
+- El módulo de facturación se diseña **multi-tenant desde el día uno** para reutilizarse en todos los proyectos (cada cliente aporta su propio RFC/CSD; el código y la integración con el PAC son los mismos → alta reutilización, casi "configurar y listo").
+- Se debe seleccionar y contratar el PAC (comparar Facturapi vs. Facturama en sandbox antes de comprometerse).
+- LOGAN mantiene el principio de NO dar asesoría fiscal (frontera con la profesión contable).
+- Pendiente operativo: cotizar a proveedores locales (Tijuana) como referencia de precio de mercado antes de fijar el pricing propio.
+**Fecha:** 2026-08-15
+**Corrige:** ninguna (amplía el catálogo de servicios; complementa DEC-LOGAN-011 sobre módulos/plantillas reutilizables).
+
 *LOGAN · Learning, Organization, Governance, Architecture & Navigation*
