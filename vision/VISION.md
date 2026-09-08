@@ -1038,4 +1038,34 @@ El usuario confirma:
 **Fecha:** 2026-08-15
 **Corrige:** ninguna (amplía el catálogo de servicios; complementa DEC-LOGAN-011 sobre módulos/plantillas reutilizables).
 
+#### DEC-LOGAN-021 — Módulo de "handoff humano" (control bot/humano) para agentes de IA, multicanal
+**Problema:** La competencia vende agentes de IA con una función muy valorada: el negocio puede **apagar el agente y tomar control manual de la conversación** con su cliente (ej. cuando el cliente cotiza algo delicado, o el bot no sabe responder). Hoy el módulo Asistente IA de LOGAN (DEC-LOGAN-011) responde de forma autónoma y el panel del negocio solo permite **ver** las conversaciones, no intervenir. ¿Debe LOGAN ofrecer el "handoff humano" (traspaso a humano) como capacidad vendible, y en qué canales?
+**Alternativas:**
+- (a) No hacerlo — mantener el bot 100% autónomo (pierde competitividad frente a quienes sí ofrecen el control humano).
+- (b) Handoff solo en WhatsApp — resuelve el canal principal pero deja fuera web/redes.
+- (c) **Handoff multicanal con arquitectura de "cerebro central"**: el servidor de LOGAN media TODA conversación y decide, por un interruptor de estado (`modo: bot | humano`) por conversación, si responde la IA o un humano desde el panel. Aplica a web, WhatsApp (Cloud API oficial de Meta), Instagram/Messenger y futuros canales con el mismo núcleo.
+**Decisión:** **(c)** — LOGAN incorpora un **módulo de handoff humano multicanal**. El servidor es el "cerebro" que recibe cada mensaje y decide bot/humano según un estado persistido por conversación. Los conectores de canal (web, WhatsApp, IG/Messenger) son intercambiables sobre el mismo núcleo. Se ofrece como capacidad vendible del servicio de agentes de IA.
+**Justificación:**
+- **Aprovecha activos existentes:** LOGAN ya tiene agentes de IA (DEC-LOGAN-011, mariscosquiroa), multi-tenancy, paneles admin por cliente y el proxy `/api/llm`. El handoff es una extensión, no un producto nuevo (Art. III).
+- **La barrera técnica ya está superada en WhatsApp:** el usuario ya opera con la **WhatsApp Cloud API oficial de Meta** con permiso de envío de mensajes habilitado. Con la API oficial, todos los mensajes pasan por el servidor de LOGAN → tomar control es factible (a diferencia de conexiones no oficiales tipo QR, donde el bot es dueño del número y solo se puede observar).
+- **Patrón de industria conocido:** "human handoff / agent takeover" es un estándar en soporte con IA. No se está inventando nada riesgoso.
+- **Diferenciador competitivo:** iguala exactamente la función que vende la competencia y encaja con el modelo reseller (`{cliente}.loganos.com`).
+- **Cambio arquitectónico consciente:** el Asistente IA actual es *stateless* (sesiones in-memory, no persiste — DEC-LOGAN-011). El handoff EXIGE **persistir el estado de conversación** (modo bot/humano, historial, "cliente esperando"). Esta decisión autoriza esa persistencia SOLO para el módulo de handoff, sin alterar el resto del comportamiento del Asistente.
+- **Prueba de los 10 años:** ✓ La atención híbrida IA+humano es una tendencia estructural en atención a clientes.
+**Consideraciones de canal (WhatsApp):**
+- **Ventana de servicio de 24h de Meta:** dentro de las 24h desde el último mensaje del cliente se puede enviar texto libre (bot o humano); fuera de ella solo plantillas pre-aprobadas. El diseño debe respetar esta regla (aplica igual al humano que al bot).
+- **Costos cambiantes:** Meta modifica su modelo de cobro por conversación/mensaje periódicamente. El módulo debe ser agnóstico a esos cambios (no hardcodear supuestos de precio).
+**Ruta de implementación por fases:**
+1. **Fase 1 — Handoff en el chat web propio:** interruptor `modo: bot|humano` por conversación + panel que permite al humano escribir/responder (no solo ver) + notificación básica "cliente esperando". Sin dependencias externas → valida el modelo de punta a punta.
+2. **Fase 2 — Handoff en WhatsApp (Cloud API oficial):** conectar el mismo núcleo al webhook/envío de Meta, respetando la ventana de 24h.
+3. **Fase 3 — Instagram / Facebook Messenger** (mismo núcleo, otro conector).
+4. **Fase 4 — Handoff inteligente:** la IA detecta sola cuándo escalar a humano (cliente molesto, intención de compra alta, pregunta fuera de alcance) y alerta al panel.
+**Consecuencias:**
+- Se agrega "Agente de IA con control humano (handoff)" al catálogo de servicios de LOGAN.
+- Se introduce **persistencia** para conversaciones del módulo de handoff (nuevos modelos: conversación, mensaje, estado) — excepción acotada a la regla stateless del Asistente (DEC-LOGAN-011).
+- El núcleo se diseña **multi-tenant y multicanal desde el día uno** para reutilizarse en todos los clientes/proyectos.
+- Pendiente: en WhatsApp, manejar plantillas para reabrir conversación fuera de la ventana de 24h.
+**Fecha:** 2026-08-15
+**Corrige:** ninguna (extiende DEC-LOGAN-011; introduce persistencia acotada al módulo de handoff).
+
 *LOGAN · Learning, Organization, Governance, Architecture & Navigation*
