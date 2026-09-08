@@ -1068,4 +1068,33 @@ El usuario confirma:
 **Fecha:** 2026-08-15
 **Corrige:** ninguna (extiende DEC-LOGAN-011; introduce persistencia acotada al módulo de handoff).
 
+#### DEC-LOGAN-022 — Panel del cliente para handoff en `{cliente}.loganos.com` (multi-usuario) instalable como PWA
+**Problema:** El módulo de handoff (DEC-LOGAN-021) hoy se opera desde el panel INTERNO de LOGAN (`loganos.com`, con la cuenta de administrador de LOGAN). Para que sea un **producto vendible**, cada cliente (ej. Mariscos Quiroa) necesita **su propio acceso a su propio panel**, viendo SOLO sus conversaciones y pudiendo responder. ¿Dónde vive ese panel del cliente: dentro de la web del cliente (`mariscosquiroa.com`) o como un subdominio/tenant de LOGAN (`mariscosquiroa.loganos.com`)? ¿Y cómo se lo entregamos de forma que se sienta una "app"?
+**Alternativas:**
+- (a) Integrar el handoff DENTRO del panel admin de la web del cliente (`mariscosquiroa.com`).
+- (b) **Panel del cliente como tenant de LOGAN (`{cliente}.loganos.com`)**, con login y permisos propios, e **instalable como PWA**.
+**Decisión:** **(b)** — el handoff del cliente vive en **`{cliente}.loganos.com`** (ej. `mariscosquiroa.loganos.com`), con **autenticación multi-usuario por cliente** y **aislamiento de datos** (cada cliente ve solo sus conversaciones). El panel será una **PWA instalable** (se agrega a la pantalla de inicio, ícono propio de LOGAN, ventana propia, notificaciones).
+**Justificación:**
+- **El handoff YA vive en LOGAN** (código, BD de conversaciones, panel, endpoints en `logan-app`/`loganos.com`). La web del cliente (`mariscosquiroa.com`) no tiene nada de eso. La opción (b) **reutiliza todo**; la (a) obligaría a construir un puente (auth cruzada, exponer APIs, sincronización) → complejidad duplicada y contraria a la centralización (DEC-LOGAN-021, Art. III).
+- **El handoff es un servicio independiente** que se le vende al cliente; no tiene que estar "pegado" a su web pública. Vivir en `{cliente}.loganos.com` lo separa limpiamente de la web del negocio (como Gmail/WhatsApp Web son herramientas aparte de la web de una empresa).
+- **Coherente con el modelo reseller** ya establecido (`{cliente}.loganos.com`).
+- **PWA en vez de app nativa:** cero fricción (sin App Store/Play Store), instalación desde el navegador, ícono en pantalla, sensación de app, y notificaciones — ideal para que el dueño del negocio atienda desde el celular. Next.js (stack de LOGAN) soporta PWA bien (manifest + service worker).
+- **La base multi-tenant ya existe:** cada `Conversation` lleva `projectId` (DEC-LOGAN-021), así que el aislamiento por cliente está preparado desde el diseño.
+- **Prueba de los 10 años:** ✓ separar el panel del cliente del código del producto y entregarlo como servicio propio escala a N clientes sin acoplar sus webs.
+**Ruta de implementación (Fase 3 del handoff):**
+1. **Login/usuarios por cliente:** que el dueño del negocio entre con SU cuenta (no la de admin de LOGAN).
+2. **Permisos/aislamiento:** cada usuario ve SOLO las conversaciones de su `projectId`.
+3. **Panel acotado del cliente:** vista del handoff (Conversaciones) pensada para el cliente final, sin las secciones internas de LOGAN.
+4. **Routing por subdominio:** `{cliente}.loganos.com` resuelve al panel del cliente correcto.
+5. **PWA:** `manifest.json` (nombre, ícono LOGAN, colores) + service worker (instalable + notificaciones).
+6. **Notificaciones:** avisar "cliente esperando" (push/PWA).
+**Consecuencias:**
+- Se introduce **autenticación multi-usuario** en LOGAN (hoy hay auth simple por cookie `logan_auth` de administrador). Nuevos modelos/roles de usuario por tenant.
+- Se agrega soporte **PWA** al panel del cliente.
+- Se agrega **routing por subdominio** para `{cliente}.loganos.com`.
+- La web del cliente (`mariscosquiroa.com`) NO se toca — el handoff es un servicio aparte.
+- Marca el paso de "handoff funcional (operado por LOGAN)" a "producto multi-cliente vendible".
+**Fecha:** 2026-08-15
+**Corrige:** ninguna (extiende DEC-LOGAN-021 con la capa de producto/acceso del cliente).
+
 *LOGAN · Learning, Organization, Governance, Architecture & Navigation*
